@@ -20,14 +20,28 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kreditnik.app.ui.theme.KreditnikTheme
 import androidx.compose.foundation.layout.padding
+import androidx.activity.viewModels
+import com.kreditnik.app.viewmodel.LoanViewModel
+import com.kreditnik.app.viewmodel.LoanViewModelFactory
+import com.kreditnik.app.data.LoanRepository
+import com.kreditnik.app.data.DatabaseProvider
+
 
 
 class MainActivity : ComponentActivity() {
+    private val loanViewModel: LoanViewModel by viewModels {
+        LoanViewModelFactory(
+            LoanRepository(
+                DatabaseProvider.getDatabase(applicationContext).loanDao()
+            )
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             KreditnikTheme {
-                MainScreen()
+                MainScreen(loanViewModel)
             }
         }
     }
@@ -43,7 +57,7 @@ enum class BottomNavItem(val route: String, val icon: ImageVector, val label: St
 
 
 @Composable
-fun MainScreen() {
+fun MainScreen(loanViewModel: LoanViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -75,7 +89,7 @@ fun MainScreen() {
             startDestination = BottomNavItem.Credits.route,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
-            composable(BottomNavItem.Credits.route) { CreditsScreen() }
+            composable(BottomNavItem.Credits.route) { CreditsScreen(loanViewModel) }
             composable(BottomNavItem.History.route) { HistoryScreen() }
             composable(BottomNavItem.Analytics.route) { AnalyticsScreen() }
             composable(BottomNavItem.Settings.route) { SettingsScreen() }
@@ -84,7 +98,7 @@ fun MainScreen() {
 }
 
 @Composable
-fun CreditsScreen() {
+fun CreditsScreen(loanViewModel: LoanViewModel) {
     CenteredText("Список кредитов")
 }
 

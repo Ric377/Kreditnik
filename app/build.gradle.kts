@@ -40,6 +40,12 @@ android {
     }
 }
 
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 dependencies {
     // Навигация
     implementation(libs.androidx.navigation.compose)
