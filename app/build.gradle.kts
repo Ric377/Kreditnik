@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt") // обязательно для Room
 }
 
 android {
@@ -40,9 +41,24 @@ android {
 }
 
 dependencies {
+    // Навигация
+    implementation(libs.androidx.navigation.compose)
 
-    implementation(libs.androidx.core.ktx)
+    // ViewModel + Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Room база данных
+    implementation(libs.androidx.room.runtime)
+    kapt(libs.androidx.room.compiler)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
+
+    // Иконки Material
+    implementation(libs.androidx.material.icons.extended)
+
+    // Ваши текущие зависимости
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
