@@ -1,6 +1,8 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.kreditnik.app.ui.screens
 
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,15 +22,16 @@ import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.LoanViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import androidx.compose.material3.CenterAlignedTopAppBar
 import java.util.*
 
-/* ---------- формат «1 234 567 ₽» ---------- */
+/* ---------- форматируем 1 234 567 ₽ ---------- */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     return DecimalFormat("#,###", sym).format(this)
 }
 
-/* ---------- содержимое карточки ---------- */
+/* ---------- содержимое строки ---------- */
 @Composable
 private fun LoanRowContent(loan: Loan) {
     Row(
@@ -38,8 +41,8 @@ private fun LoanRowContent(loan: Loan) {
             .padding(16.dp)
     ) {
         Surface(
-            shape  = CircleShape,
-            color  = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
             modifier = Modifier.size(48.dp)
         ) {
             Icon(
@@ -53,20 +56,20 @@ private fun LoanRowContent(loan: Loan) {
         Spacer(Modifier.width(16.dp))
 
         Text(
-            text  = loan.name,
+            text = loan.name,
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
 
         Text(
-            text  = "${loan.principal.formatMoney()} ₽",
+            text = "${loan.principal.formatMoney()} ₽",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         )
     }
 }
 
-/* ---------- карточка списка ---------- */
+/* ---------- полупрозрачная карточка ---------- */
 @Composable
 private fun LoanListItem(
     loan: Loan,
@@ -74,8 +77,8 @@ private fun LoanListItem(
 ) {
     Card(
         onClick = onClick,
-        shape   = RoundedCornerShape(12.dp),
-        colors  = CardDefaults.cardColors(
+        shape  = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
         modifier = Modifier
@@ -92,18 +95,18 @@ fun CreditsScreen(
 ) {
     val loans by loanViewModel.loans.collectAsState()
 
-    /* пересчёт общей суммы */
+    /* общая сумма обновляется при любом изменении списка */
     val total by remember(loans) {
         derivedStateOf { loans.sumOf { it.principal }.formatMoney() }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(                                     /* заголовок слева */
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text  = "Общая сумма: $total ₽",
-                        style = MaterialTheme.typography.titleLarge   // крупный шрифт
+                        style = MaterialTheme.typography.titleLarge   // крупнее
                     )
                 }
             )
