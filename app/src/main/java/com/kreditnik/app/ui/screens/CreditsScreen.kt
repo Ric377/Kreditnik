@@ -1,4 +1,4 @@
-/*  app/src/main/java/com/kreditnik/app/ui/screens/CreditsScreen.kt  */
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.kreditnik.app.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
@@ -23,13 +22,13 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
 
-/* ---------- форматируем сумму вида 1 234 567 ₽ ---------- */
+/* ---------- формат «1 234 567 ₽» ---------- */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     return DecimalFormat("#,###", sym).format(this)
 }
 
-/* ---------- контент одной строки (логотип-название-сумма) ---------- */
+/* ---------- содержимое карточки ---------- */
 @Composable
 private fun LoanRowContent(loan: Loan) {
     Row(
@@ -38,7 +37,6 @@ private fun LoanRowContent(loan: Loan) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        /* логотип-заглушка */
         Surface(
             shape  = CircleShape,
             color  = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
@@ -54,25 +52,21 @@ private fun LoanRowContent(loan: Loan) {
 
         Spacer(Modifier.width(16.dp))
 
-        /* название */
         Text(
-            text = loan.name,
+            text  = loan.name,
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
 
-        /* сумма справа */
         Text(
-            text = "${loan.principal.formatMoney()} ₽",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            )
+            text  = "${loan.principal.formatMoney()} ₽",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         )
     }
 }
 
-/* ---------- сама карточка ─ полупрозрачный вариант ---------- */
+/* ---------- карточка списка ---------- */
 @Composable
 private fun LoanListItem(
     loan: Loan,
@@ -82,17 +76,15 @@ private fun LoanListItem(
         onClick = onClick,
         shape   = RoundedCornerShape(12.dp),
         colors  = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) // 40 % прозрачности
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        LoanRowContent(loan)
-    }
+    ) { LoanRowContent(loan) }
 }
 
-/* ---------- главный экран со списком ---------- */
+/* ---------- главный экран ---------- */
 @Composable
 fun CreditsScreen(
     loanViewModel: LoanViewModel,
@@ -100,7 +92,22 @@ fun CreditsScreen(
 ) {
     val loans by loanViewModel.loans.collectAsState()
 
+    /* пересчёт общей суммы */
+    val total by remember(loans) {
+        derivedStateOf { loans.sumOf { it.principal }.formatMoney() }
+    }
+
     Scaffold(
+        topBar = {
+            TopAppBar(                                     /* заголовок слева */
+                title = {
+                    Text(
+                        text  = "Общая сумма: $total ₽",
+                        style = MaterialTheme.typography.titleLarge   // крупный шрифт
+                    )
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("addLoan") }) {
                 Icon(Icons.Default.Add, contentDescription = "Добавить кредит")
@@ -112,7 +119,7 @@ fun CreditsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(loans, key = { it.id }) { loan ->
-                LoanListItem(loan)   // по клику можно добавить навигацию
+                LoanListItem(loan)
             }
         }
     }
