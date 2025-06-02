@@ -25,7 +25,11 @@ import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.data.LoanRepository
 import com.kreditnik.app.data.DatabaseProvider
-
+import com.kreditnik.app.ui.screens.AddLoanScreen
+import com.kreditnik.app.ui.screens.CreditsScreen
+import com.kreditnik.app.ui.screens.HistoryScreen
+import com.kreditnik.app.ui.screens.AnalyticsScreen
+import com.kreditnik.app.ui.screens.SettingsScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -89,45 +93,17 @@ fun MainScreen(loanViewModel: LoanViewModel) {
             startDestination = BottomNavItem.Credits.route,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
-            composable(BottomNavItem.Credits.route) { CreditsScreen(loanViewModel) }
+            composable(BottomNavItem.Credits.route) {
+                CreditsScreen(loanViewModel, navController)
+            }
             composable(BottomNavItem.History.route) { HistoryScreen() }
             composable(BottomNavItem.Analytics.route) { AnalyticsScreen() }
             composable(BottomNavItem.Settings.route) { SettingsScreen() }
+            composable("addLoan") { AddLoanScreen(loanViewModel, navController) }
         }
     }
 }
 
-@Composable
-fun CreditsScreen(loanViewModel: LoanViewModel) {
-    CenteredText("Список кредитов")
-}
-
-@Composable
-fun HistoryScreen() {
-    CenteredText("История операций")
-}
-
-@Composable
-fun AnalyticsScreen() {
-    CenteredText("Аналитика")
-}
-
-@Composable
-fun SettingsScreen() {
-    CenteredText("Настройки")
-}
-
-@Composable
-fun CenteredText(text: String) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier
-                .fillMaxSize(),
-        )
-    }
-}
+// УДАЛИТЕ ВСЁ, ЧТО БЫЛО НИЖЕ ВАШЕГО ПРЕДЫДУЩЕГО КОДА В MainActivity.kt
+// (HistoryScreen, AnalyticsScreen, SettingsScreen, CenteredText),
+// так как они теперь находятся в отдельных файлах и импортируются.
