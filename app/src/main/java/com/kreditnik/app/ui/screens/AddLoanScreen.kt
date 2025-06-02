@@ -1,6 +1,8 @@
 package com.kreditnik.app.ui.screens
 
-import android.app.DatePickerDialog
+
+import android.app.DatePickerDialog as AndroidDatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -122,73 +124,46 @@ fun AddLoanScreen(loanViewModel: LoanViewModel, navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Поле выбора даты - ИСПРАВЛЕННЫЙ БЛОК
-            var showDatePicker by remember { mutableStateOf(false) }
-            val datePickerState = rememberDatePickerState(
-                initialSelectedDateMillis = selectedDate
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
-            )
+            // ---------- ПОЛЕ «Дата открытия» ----------
+            val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy") }
 
-            OutlinedTextField(
-                value = selectedDate.format(dateFormatter),
-                onValueChange = { },
-                label = { Text("Дата открытия") },
-                readOnly = true, // Поле только для чтения
-                shape = fieldShape,
+            Box(                                          // ① всё поле кликабельно
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null
+                        indication = null                 // без лишнего ripple
                     ) {
-                        showDatePicker = true
-                        // ДОБАВЬТЕ ЭТУ СТРОКУ ДЛЯ ОТЛАДКИ:
-                        Toast.makeText(context, "Поле даты кликнуто! Календарь: $showDatePicker", Toast.LENGTH_SHORT).show()
-                    },
-                trailingIcon = {
-                    Icon(
-                        Icons.Filled.CalendarToday,
-                        contentDescription = "Выбрать дату"
-                    )
-                }
-            )
-
-            if (showDatePicker) {
-                DatePickerDialog(
-                    onDismissRequest = { showDatePicker = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                val newSelectedMillis = datePickerState.selectedDateMillis
-                                if (newSelectedMillis != null) {
-                                    selectedDate = Instant.ofEpochMilli(newSelectedMillis)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate()
-                                    // Отладочное сообщение
-                                    Toast.makeText(context, "Дата выбрана: ${selectedDate.format(dateFormatter)}", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    // Отладочное сообщение
-                                    Toast.makeText(context, "Дата не выбрана", Toast.LENGTH_SHORT).show()
-                                }
-                                showDatePicker = false
-                            }
-                        ) {
-                            Text("OK")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showDatePicker = false }
-                        ) {
-                            Text("Отмена")
-                        }
+                        AndroidDatePickerDialog(          // системный календарь
+                            context,
+                            { _, y, m, d -> selectedDate = LocalDate.of(y, m + 1, d) },
+                            selectedDate.year,
+                            selectedDate.monthValue - 1,
+                            selectedDate.dayOfMonth
+                        ).show()
                     }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
+            ) {
+                OutlinedTextField(
+                    value         = selectedDate.format(dateFormatter),
+                    onValueChange = {},                   // read-only
+                    label         = { Text("Дата открытия") },
+                    readOnly      = true,
+                    enabled       = false,                // ② не перехватывает жест
+                    trailingIcon  = { Icon(Icons.Filled.CalendarToday, null) },
+                    shape         = fieldShape,
+                    colors = OutlinedTextFieldDefaults.colors(   // оставляем «живые» цвета
+                        disabledTextColor          = MaterialTheme.colorScheme.onSurface,
+                        disabledLabelColor         = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledBorderColor        = MaterialTheme.colorScheme.outline,
+                        disabledTrailingIconColor  = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledContainerColor     = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier      = Modifier.fillMaxWidth()
+                )
             }
+
+
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
