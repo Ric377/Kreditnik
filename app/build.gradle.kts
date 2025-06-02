@@ -59,6 +59,7 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
+    implementation("com.google.android.material:material:1.11.0")
 
     // Иконки Material
     implementation(libs.androidx.material.icons.extended)
@@ -67,6 +68,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+    implementation("com.google.android.material:material:1.11.0")
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
