@@ -5,21 +5,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import java.time.LocalDate
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import java.util.Locale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.SettingsViewModel
+import com.kreditnik.app.viewmodel.LoanViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import com.kreditnik.app.viewmodel.LoanViewModel
-
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +37,7 @@ fun LoanDetailScreen(
                 title = { Text(loan.name) },
                 actions = {
                     IconButton(onClick = { expandedMenu.value = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Меню действий")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Меню действий")
                     }
                     DropdownMenu(
                         expanded = expandedMenu.value,
@@ -64,13 +63,6 @@ fun LoanDetailScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                // TODO: Логика редактирования
-            }) {
-                Icon(Icons.Default.Edit, contentDescription = "Редактировать")
-            }
         }
     ) { innerPadding ->
         Column(
@@ -89,15 +81,19 @@ fun LoanDetailScreen(
                     LoanDetailItem("Сумма", "${loan.principal.formatMoney()} $currency")
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
                     LoanDetailItem("Срок", "${loan.months} месяцев")
-                    LoanDetailItem("Дата открытия", loan.startDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")))
+                    LoanDetailItem(
+                        "Дата открытия",
+                        loan.startDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+                    )
                     LoanDetailItem(
                         "Ежемесячный платёж",
-                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
+                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months)
+                            .formatMoney()} $currency"
                     )
-
                     LoanDetailItem(
                         "Ближайший платёж",
-                        getNextPaymentDate(loan.startDate, loan.monthlyPaymentDay).format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
+                        getNextPaymentDate(loan.startDate, loan.monthlyPaymentDay)
+                            .format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
                     )
                 }
             }
@@ -120,9 +116,12 @@ private fun LoanDetailItem(label: String, value: String) {
     }
 }
 
+// ====== Здесь заменили функцию форматирования ======
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
-    return DecimalFormat("#,###", sym).format(this)
+    // Если дробная часть = 0, показываем без десятичных. Иначе – до двух знаков после точки.
+    val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
+    return DecimalFormat(pattern, sym).format(this)
 }
 
 private fun calculateMonthlyPayment(principal: Double, annualRate: Double, months: Int): Double {
@@ -130,32 +129,25 @@ private fun calculateMonthlyPayment(principal: Double, annualRate: Double, month
     return if (monthlyRate == 0.0) {
         principal / months
     } else {
-        principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) / (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
+        principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) /
+                (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
     }
 }
 
 private fun getNextPaymentDate(startDate: LocalDate, paymentDay: Int): LocalDate {
     val today = LocalDate.now()
 
-    // Если пользователь выбрал «0», считаем, что это «последний день текущего месяца»
-    val dayThisMonth = if (paymentDay == 0) {
-        today.lengthOfMonth()
-    } else {
-        paymentDay.coerceAtMost(today.lengthOfMonth())
-    }
+    // Если paymentDay == 0, считаем за «последний день месяца»
+    val dayThisMonth = if (paymentDay == 0) today.lengthOfMonth()
+    else paymentDay.coerceAtMost(today.lengthOfMonth())
     val thisMonthPayment = today.withDayOfMonth(dayThisMonth)
 
     return if (today <= thisMonthPayment) {
         thisMonthPayment
     } else {
         val nextMonth = today.plusMonths(1)
-        // Аналогично: если paymentDay == 0, берем последний день следующего месяца
-        val dayNextMonth = if (paymentDay == 0) {
-            nextMonth.lengthOfMonth()
-        } else {
-            paymentDay.coerceAtMost(nextMonth.lengthOfMonth())
-        }
+        val dayNextMonth = if (paymentDay == 0) nextMonth.lengthOfMonth()
+        else paymentDay.coerceAtMost(nextMonth.lengthOfMonth())
         nextMonth.withDayOfMonth(dayNextMonth)
     }
 }
-

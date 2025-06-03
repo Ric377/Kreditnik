@@ -27,8 +27,10 @@ import java.util.*
 /* ---------- форматируем 1 234 567 ---------- */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
-    return DecimalFormat("#,###", sym).format(this)
+    val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
+    return DecimalFormat(pattern, sym).format(this)
 }
+
 
 /* ---------- содержимое строки ---------- */
 @Composable
