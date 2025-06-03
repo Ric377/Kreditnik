@@ -17,10 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.kreditnik.app.data.DatabaseProvider
 import com.kreditnik.app.data.LoanRepository
 import com.kreditnik.app.ui.screens.AddLoanScreen
@@ -28,6 +30,7 @@ import com.kreditnik.app.ui.screens.AnalyticsScreen
 import com.kreditnik.app.ui.screens.CreditsScreen
 import com.kreditnik.app.ui.screens.HistoryScreen
 import com.kreditnik.app.ui.screens.SettingsScreen
+import com.kreditnik.app.ui.screens.LoanDetailScreen
 import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
@@ -118,6 +121,22 @@ fun MainScreen(
             }
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
+            }
+            composable(
+                route = "loanDetail/{loanId}",
+                arguments = listOf(navArgument("loanId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val loanId = backStackEntry.arguments?.getInt("loanId") ?: return@composable
+                val loan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId.toLong() }
+                val detailSettingsViewModel: SettingsViewModel = viewModel()
+
+                if (loan != null) {
+                    LoanDetailScreen(
+                        loan = loan,
+                        settingsViewModel = detailSettingsViewModel,
+                        navController = navController
+                    )
+                }
             }
         }
     }

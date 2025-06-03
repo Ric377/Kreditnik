@@ -124,7 +124,9 @@ fun CreditsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(loans, key = { it.id }) { loan ->
-                LoanListItem(loan, currency)  // <-- передаем валюту в карточку
+                LoanListItem(loan, currency) {
+                    navController.navigate("loanDetail/${loan.id}")
+                }
             }
         }
     }
