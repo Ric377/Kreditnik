@@ -17,13 +17,16 @@ import com.kreditnik.app.viewmodel.SettingsViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
+import com.kreditnik.app.viewmodel.LoanViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoanDetailScreen(
     loan: Loan,
     settingsViewModel: SettingsViewModel,
-    navController: NavController
+    navController: NavController,
+    loanViewModel: LoanViewModel
 ) {
     val currency by settingsViewModel.defaultCurrency.collectAsState()
     val expandedMenu = remember { mutableStateOf(false) }
@@ -43,16 +46,17 @@ fun LoanDetailScreen(
                         DropdownMenuItem(
                             text = { Text("Редактировать") },
                             onClick = {
-                                // TODO: Переход на редактирование кредита
                                 expandedMenu.value = false
+                                navController.navigate("editLoan/${loan.id}")
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
                             text = { Text("Удалить") },
                             onClick = {
-                                // TODO: Удалить кредит
                                 expandedMenu.value = false
+                                loanViewModel.deleteLoan(loan)
+                                navController.popBackStack()
                             },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                         )

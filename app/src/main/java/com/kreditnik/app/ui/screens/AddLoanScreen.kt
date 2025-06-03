@@ -34,7 +34,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddLoanScreen(loanViewModel: LoanViewModel, navController: NavController) {
+fun AddLoanScreen(
+    loanViewModel: LoanViewModel,
+    navController: NavController,
+    loan: Loan? = null
+) {
     var name by remember { mutableStateOf("") }
     var principal by remember { mutableStateOf("") }
     var interestRate by remember { mutableStateOf("") }

@@ -122,6 +122,18 @@ fun MainScreen(
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
             }
+
+            composable(
+                route = "editLoan/{loanId}",
+                arguments = listOf(navArgument("loanId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val loanId = backStackEntry.arguments?.getLong("loanId") ?: return@composable
+                val editLoan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId }
+                if (editLoan != null) {
+                    AddLoanScreen(loanViewModel, navController, editLoan)
+                }
+            }
+
             composable(
                 route = "loanDetail/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.IntType })
@@ -134,7 +146,8 @@ fun MainScreen(
                     LoanDetailScreen(
                         loan = loan,
                         settingsViewModel = detailSettingsViewModel,
-                        navController = navController
+                        navController = navController,
+                        loanViewModel = loanViewModel
                     )
                 }
             }
