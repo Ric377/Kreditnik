@@ -46,6 +46,17 @@ fun AddLoanScreen(
     var selectedType by remember { mutableStateOf(loan?.type ?: LoanType.CREDIT) }
     var selectedDate by remember { mutableStateOf(loan?.startDate ?: LocalDate.now()) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    val daysInMonth = (1..28).toList() + listOf(0)  // 0 — Последний день месяца
+    var selectedPaymentDay by remember { mutableStateOf(loan?.monthlyPaymentDay ?: selectedDate.dayOfMonth) }
+    var paymentDayExpanded by remember { mutableStateOf(false) }
+
+    var nameError by remember { mutableStateOf(false) }
+    var principalError by remember { mutableStateOf(false) }
+    var interestRateError by remember { mutableStateOf(false) }
+    var monthsError by remember { mutableStateOf(false) }
+    var monthlyPaymentError by remember { mutableStateOf(false) }
+
+
 
     val context = LocalContext.current
     val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
@@ -76,11 +87,55 @@ fun AddLoanScreen(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = {
+                    name = it
+                    nameError = false // сброс ошибки при вводе
+                },
+                isError = nameError, // подсветка поля
                 label = { Text("Название кредита") },
+                supportingText = {
+                    if (nameError) Text("Введите название кредита")
+                },
                 shape = fieldShape,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Тип кредита
+            ExposedDropdownMenuBox(
+                expanded = typeMenuExpanded,
+                onExpandedChange = { typeMenuExpanded = !typeMenuExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    readOnly = true,
+                    value = selectedType.displayName,
+                    onValueChange = {},
+                    label = { Text("Тип кредита") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) },
+                    shape = fieldShape,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    colors = OutlinedTextFieldDefaults.colors()
+                )
+                ExposedDropdownMenu(
+                    expanded = typeMenuExpanded,
+                    onDismissRequest = { typeMenuExpanded = false }
+                ) {
+                    LoanType.values().forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.displayName) },
+                            onClick = {
+                                selectedType = type
+                                typeMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -167,23 +222,19 @@ fun AddLoanScreen(
                 )
             }
 
-
-
-
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Тип кредита
             ExposedDropdownMenuBox(
-                expanded = typeMenuExpanded,
-                onExpandedChange = { typeMenuExpanded = !typeMenuExpanded },
+                expanded = paymentDayExpanded,
+                onExpandedChange = { paymentDayExpanded = !paymentDayExpanded },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     readOnly = true,
-                    value = selectedType.displayName,
+                    value = if (selectedPaymentDay == 0) "Последний день месяца" else "$selectedPaymentDay",
                     onValueChange = {},
-                    label = { Text("Тип кредита") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) },
+                    label = { Text("День платежа") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = paymentDayExpanded) },
                     shape = fieldShape,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,20 +242,76 @@ fun AddLoanScreen(
                     colors = OutlinedTextFieldDefaults.colors()
                 )
                 ExposedDropdownMenu(
-                    expanded = typeMenuExpanded,
-                    onDismissRequest = { typeMenuExpanded = false }
+                    expanded = paymentDayExpanded,
+                    onDismissRequest = { paymentDayExpanded = false }
                 ) {
-                    LoanType.values().forEach { type ->
+                    daysInMonth.forEach { day ->
                         DropdownMenuItem(
-                            text = { Text(type.displayName) },
+                            text = { Text(if (day == 0) "Последний день месяца" else "$day") },
                             onClick = {
-                                selectedType = type
-                                typeMenuExpanded = false
+                                selectedPaymentDay = day
+                                paymentDayExpanded = false
                             }
                         )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+// ---------- Ввод ежемесячного платежа + Чекбокс в поле ----------
+            var manualMonthlyPayment by remember { mutableStateOf("") }
+            var autoCalculatePayment by remember { mutableStateOf(false) }
+
+            OutlinedTextField(
+                value = manualMonthlyPayment,
+                onValueChange = {
+                    if (!autoCalculatePayment && (it.all { ch -> ch.isDigit() || ch == '.' })) {
+                        manualMonthlyPayment = it
+                    }
+                },
+                label = { Text("Ежемесячный платёж") },
+                readOnly = autoCalculatePayment,
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Auto",
+                            style = MaterialTheme.typography.bodyLarge // <-- стиль как текст в поле
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Checkbox(
+                            checked = autoCalculatePayment,
+                            onCheckedChange = { autoCalculatePayment = it }
+                        )
+                    }
+                },
+                shape = fieldShape,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+
+            // --- Автообновление поля при автоподсчете
+            LaunchedEffect(autoCalculatePayment, principal, interestRate, months) {
+                if (autoCalculatePayment) {
+                    val loanPrincipal = principal.toDoubleOrNull()
+                    val loanMonths = months.toIntOrNull()
+                    val loanInterestRate = interestRate.toDoubleOrNull()
+                    if (loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanMonths > 0) {
+                        val monthlyRate = (loanInterestRate / 100) / 12
+                        val calculatedPayment = if (monthlyRate == 0.0) {
+                            loanPrincipal / loanMonths
+                        } else {
+                            loanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, loanMonths.toDouble())) /
+                                    (Math.pow(1 + monthlyRate, loanMonths.toDouble()) - 1)
+                        }
+                        manualMonthlyPayment = String.format("%.2f", calculatedPayment)
+                    }
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -213,18 +320,27 @@ fun AddLoanScreen(
                     val loanPrincipal = principal.toDoubleOrNull()
                     val loanMonths = months.toIntOrNull()
                     val loanInterestRate = interestRate.toDoubleOrNull()
+                    val monthlyPayment = manualMonthlyPayment.toDoubleOrNull()
 
-                    if (name.isNotBlank() && loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanPrincipal > 0 && loanMonths > 0) {
+                    nameError = name.isBlank()
+                    principalError = loanPrincipal == null || loanPrincipal <= 0
+                    interestRateError = loanInterestRate == null
+                    monthsError = loanMonths == null || loanMonths <= 0
+                    monthlyPaymentError = monthlyPayment == null
+
+                    val hasError = nameError || principalError || interestRateError || monthsError || monthlyPaymentError
+
+                    if (!hasError) {
                         if (loan == null) {
                             val newLoan = Loan(
                                 name = name,
                                 type = selectedType,
                                 logo = "",
-                                interestRate = loanInterestRate,
+                                interestRate = loanInterestRate!!,
                                 startDate = selectedDate,
-                                monthlyPaymentDay = selectedDate.dayOfMonth,
-                                principal = loanPrincipal,
-                                months = loanMonths,
+                                monthlyPaymentDay = selectedPaymentDay,
+                                principal = loanPrincipal!!,
+                                months = loanMonths!!,
                                 gracePeriodDays = null,
                                 mandatoryPaymentDay = null,
                                 gracePeriodEndDate = null,
@@ -235,25 +351,17 @@ fun AddLoanScreen(
                             val updatedLoan = loan.copy(
                                 name = name,
                                 type = selectedType,
-                                interestRate = loanInterestRate,
+                                interestRate = loanInterestRate!!,
                                 startDate = selectedDate,
-                                monthlyPaymentDay = selectedDate.dayOfMonth,
-                                principal = loanPrincipal,
-                                months = loanMonths
+                                monthlyPaymentDay = selectedPaymentDay,
+                                principal = loanPrincipal!!,
+                                months = loanMonths!!
                             )
                             loanViewModel.updateLoan(updatedLoan)
                         }
                         navController.popBackStack()
-                    } else {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                message = "Пожалуйста, заполните все поля корректными данными.",
-                                actionLabel = "ОК",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
                     }
-                },
+                },   // <--- вот здесь закрытие
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -266,12 +374,14 @@ fun AddLoanScreen(
                     defaultElevation = 4.dp,
                     pressedElevation = 8.dp
                 )
-            ) {
+            )
+            {
                 Text(
                     text = if (loan == null) "Сохранить" else "Сохранить изменения",
                     style = MaterialTheme.typography.labelLarge
                 )
             }
+
 
 
             Spacer(modifier = Modifier.height(16.dp))
