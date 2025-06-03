@@ -136,14 +136,26 @@ private fun calculateMonthlyPayment(principal: Double, annualRate: Double, month
 
 private fun getNextPaymentDate(startDate: LocalDate, paymentDay: Int): LocalDate {
     val today = LocalDate.now()
-    val thisMonthPayment = today.withDayOfMonth(
+
+    // Если пользователь выбрал «0», считаем, что это «последний день текущего месяца»
+    val dayThisMonth = if (paymentDay == 0) {
+        today.lengthOfMonth()
+    } else {
         paymentDay.coerceAtMost(today.lengthOfMonth())
-    )
+    }
+    val thisMonthPayment = today.withDayOfMonth(dayThisMonth)
+
     return if (today <= thisMonthPayment) {
         thisMonthPayment
     } else {
-        today.plusMonths(1).withDayOfMonth(
-            paymentDay.coerceAtMost(today.plusMonths(1).lengthOfMonth())
-        )
+        val nextMonth = today.plusMonths(1)
+        // Аналогично: если paymentDay == 0, берем последний день следующего месяца
+        val dayNextMonth = if (paymentDay == 0) {
+            nextMonth.lengthOfMonth()
+        } else {
+            paymentDay.coerceAtMost(nextMonth.lengthOfMonth())
+        }
+        nextMonth.withDayOfMonth(dayNextMonth)
     }
 }
+
