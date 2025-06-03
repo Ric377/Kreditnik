@@ -30,6 +30,9 @@ import com.kreditnik.app.ui.screens.CreditsScreen
 import com.kreditnik.app.ui.screens.HistoryScreen
 import com.kreditnik.app.ui.screens.AnalyticsScreen
 import com.kreditnik.app.ui.screens.SettingsScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kreditnik.app.viewmodel.SettingsViewModel
+
 
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +47,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            KreditnikTheme {
+            val settingsViewModel: SettingsViewModel = viewModel()
+            val darkTheme by settingsViewModel.darkModeEnabled.collectAsState()
+
+            KreditnikTheme(darkTheme = darkTheme) {
                 MainScreen(loanViewModel)
             }
         }
@@ -103,7 +109,3 @@ fun MainScreen(loanViewModel: LoanViewModel) {
         }
     }
 }
-
-// УДАЛИТЕ ВСЁ, ЧТО БЫЛО НИЖЕ ВАШЕГО ПРЕДЫДУЩЕГО КОДА В MainActivity.kt
-// (HistoryScreen, AnalyticsScreen, SettingsScreen, CenteredText),
-// так как они теперь находятся в отдельных файлах и импортируются.
