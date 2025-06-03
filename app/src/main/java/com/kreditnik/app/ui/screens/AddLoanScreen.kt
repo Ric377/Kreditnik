@@ -72,35 +72,29 @@ fun AddLoanScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp) // теперь между каждым прямым потомком будет по 12.dp
         ) {
-            // Заголовок экрана
-            Text(
-                text = if (loan == null) "Добавить новый кредит" else "Редактировать кредит",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .padding(bottom = 24.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
-
             // ==== БЛОК 1: Название кредита ====
             OutlinedTextField(
                 value = name,
                 onValueChange = {
                     name = it
-                    nameError = false // сброс ошибки при вводе
+                    nameError = false
                 },
-                isError = nameError, // подсветка поля
-                supportingText = {
-                    if (nameError) Text("Введите название кредита")
-                },
+                isError = nameError,
                 label = { Text("Название кредита") },
                 shape = fieldShape,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            if (nameError) {
+                Text(
+                    text = "Введите название кредита",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp) // отступ под «иконку» поля
+                )
+            }
 
             // ==== БЛОК 2: Тип кредита ====
             ExposedDropdownMenuBox(
@@ -136,30 +130,31 @@ fun AddLoanScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             // ==== БЛОК 3: Сумма кредита ====
             OutlinedTextField(
                 value = principal,
                 onValueChange = { newValue ->
                     if (newValue.all { it.isDigit() || it == '.' }) {
                         principal = newValue
-                        principalError = false // сброс ошибки
+                        principalError = false
                     }
                 },
                 isError = principalError,
-                supportingText = {
-                    if (principalError) Text("Введите сумму больше 0")
-                },
                 label = { Text("Сумма кредита") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                 shape = fieldShape,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
+            if (principalError) {
+                Text(
+                    text = "Введите сумму больше 0",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ==== БЛОК 4: Процентная ставка ====
+            // ==== БЛОК 4: Процентная ставка (%) ====
             OutlinedTextField(
                 value = interestRate,
                 onValueChange = { newValue ->
@@ -169,16 +164,19 @@ fun AddLoanScreen(
                     }
                 },
                 isError = interestRateError,
-                supportingText = {
-                    if (interestRateError) Text("Введите процентную ставку")
-                },
                 label = { Text("Процентная ставка (%)") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                 shape = fieldShape,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            if (interestRateError) {
+                Text(
+                    text = "Введите процентную ставку",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
 
             // ==== БЛОК 5: Срок кредита (в месяцах) ====
             OutlinedTextField(
@@ -190,16 +188,19 @@ fun AddLoanScreen(
                     }
                 },
                 isError = monthsError,
-                supportingText = {
-                    if (monthsError) Text("Введите срок больше 0")
-                },
                 label = { Text("Срок кредита (в месяцах)") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                 shape = fieldShape,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            if (monthsError) {
+                Text(
+                    text = "Введите срок больше 0",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
 
             // ==== БЛОК 6: Дата открытия ====
             Box(
@@ -237,8 +238,6 @@ fun AddLoanScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             // ==== БЛОК 7: День платежа ====
             ExposedDropdownMenuBox(
                 expanded = paymentDayExpanded,
@@ -273,8 +272,6 @@ fun AddLoanScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             // ==== БЛОК 8: Ежемесячный платёж (с опцией Auto) ====
             OutlinedTextField(
                 value = manualMonthlyPayment,
@@ -285,9 +282,6 @@ fun AddLoanScreen(
                     }
                 },
                 isError = monthlyPaymentError,
-                supportingText = {
-                    if (monthlyPaymentError) Text("Введите корректный платёж")
-                },
                 label = { Text("Ежемесячный платёж") },
                 readOnly = autoCalculatePayment,
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
@@ -309,8 +303,16 @@ fun AddLoanScreen(
                 shape = fieldShape,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (monthlyPaymentError) {
+                Text(
+                    text = "Введите корректный платёж",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
 
-            // ==== Авторасчёт платёжа ====
+            // ==== Авторасчёт ежемесячного платежа ====
             LaunchedEffect(autoCalculatePayment, principal, interestRate, months) {
                 if (autoCalculatePayment) {
                     val loanPrincipal = principal.toDoubleOrNull()
@@ -318,28 +320,26 @@ fun AddLoanScreen(
                     val loanInterestRate = interestRate.toDoubleOrNull()
                     if (loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanMonths > 0) {
                         val monthlyRate = (loanInterestRate / 100) / 12
+                        // если ставка нулевая, просто делим
                         val calculatedPayment = if (monthlyRate == 0.0) {
                             loanPrincipal / loanMonths
                         } else {
                             loanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, loanMonths.toDouble())) /
                                     (Math.pow(1 + monthlyRate, loanMonths.toDouble()) - 1)
                         }
+                        // заполняем строку двумя знаками после запятой
                         manualMonthlyPayment = String.format("%.2f", calculatedPayment)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             // ==== БЛОК 9: Кнопка «Сохранить» с валидацией ====
             Button(
                 onClick = {
-                    // Парсим вводы в числа
                     val loanPrincipal = principal.toDoubleOrNull()
                     val loanMonths = months.toIntOrNull()
                     val loanInterestRate = interestRate.toDoubleOrNull()
 
-                    // Вычисляем платёж: либо из поля, либо авто
                     val monthlyPayment = if (autoCalculatePayment) {
                         if (loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanMonths > 0) {
                             val monthlyRate = (loanInterestRate / 100) / 12
@@ -356,7 +356,6 @@ fun AddLoanScreen(
                         manualMonthlyPayment.toDoubleOrNull()
                     }
 
-                    // Проверяем ошибки
                     nameError = name.isBlank()
                     principalError = loanPrincipal == null || loanPrincipal <= 0
                     interestRateError = loanInterestRate == null
@@ -366,7 +365,6 @@ fun AddLoanScreen(
                     val hasError = nameError || principalError || interestRateError || monthsError || monthlyPaymentError
 
                     if (!hasError) {
-                        // Если всё корректно, создаём/обновляем Loan
                         if (loan == null) {
                             val newLoan = Loan(
                                 name = name,
@@ -416,8 +414,6 @@ fun AddLoanScreen(
                     style = MaterialTheme.typography.labelLarge
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
