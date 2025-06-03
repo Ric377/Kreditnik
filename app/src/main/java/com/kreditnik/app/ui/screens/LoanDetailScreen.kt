@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import java.util.Locale
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -35,16 +34,24 @@ fun LoanDetailScreen(
                 title = { Text(loan.name) },
                 actions = {
                     IconButton(onClick = { expandedMenu.value = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Меню")
+                        Icon(Icons.Default.Edit, contentDescription = "Меню действий")
                     }
                     DropdownMenu(
                         expanded = expandedMenu.value,
                         onDismissRequest = { expandedMenu.value = false }
                     ) {
                         DropdownMenuItem(
+                            text = { Text("Редактировать") },
+                            onClick = {
+                                // TODO: Переход на редактирование кредита
+                                expandedMenu.value = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
                             text = { Text("Удалить") },
                             onClick = {
-                                // TODO: Логика удаления
+                                // TODO: Удалить кредит
                                 expandedMenu.value = false
                             },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
