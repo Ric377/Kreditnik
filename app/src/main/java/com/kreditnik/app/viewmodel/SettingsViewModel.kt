@@ -19,6 +19,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val defaultCurrency = settingsDataStore.defaultCurrencyFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, "RUB")
 
+    val availableCurrencies = listOf("USD", "EUR", "GBP", "RUB", "CNY", "GEL")
+
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataStore.setDarkMode(enabled)
@@ -31,3 +33,4 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 }
+
