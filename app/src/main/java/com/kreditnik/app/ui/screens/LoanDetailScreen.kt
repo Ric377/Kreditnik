@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import java.time.LocalDate
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,8 +90,15 @@ fun LoanDetailScreen(
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
                     LoanDetailItem("Срок", "${loan.months} месяцев")
                     LoanDetailItem("Дата открытия", loan.startDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")))
-                    LoanDetailItem("Ежемесячный платёж", "${calculateMonthlyPayment(loan).formatMoney()} $currency")
-                    LoanDetailItem("День платежа", "${loan.monthlyPaymentDay}-е число")
+                    LoanDetailItem(
+                        "Ежемесячный платёж",
+                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
+                    )
+
+                    LoanDetailItem(
+                        "Ближайший платёж",
+                        getNextPaymentDate(loan.startDate, loan.monthlyPaymentDay).format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
+                    )
                 }
             }
         }
@@ -117,14 +125,25 @@ private fun Double.formatMoney(): String {
     return DecimalFormat("#,###", sym).format(this)
 }
 
-private fun calculateMonthlyPayment(loan: Loan): Double {
-    val principal = loan.principal
-    val rate = loan.interestRate / 100 / 12
-    val months = loan.months
-    return if (rate == 0.0) {
+private fun calculateMonthlyPayment(principal: Double, annualRate: Double, months: Int): Double {
+    val monthlyRate = (annualRate / 100) / 12
+    return if (monthlyRate == 0.0) {
         principal / months
     } else {
-        val factor = Math.pow(1 + rate, months.toDouble())
-        principal * rate * factor / (factor - 1)
+        principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) / (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
+    }
+}
+
+private fun getNextPaymentDate(startDate: LocalDate, paymentDay: Int): LocalDate {
+    val today = LocalDate.now()
+    val thisMonthPayment = today.withDayOfMonth(
+        paymentDay.coerceAtMost(today.lengthOfMonth())
+    )
+    return if (today <= thisMonthPayment) {
+        thisMonthPayment
+    } else {
+        today.plusMonths(1).withDayOfMonth(
+            paymentDay.coerceAtMost(today.plusMonths(1).lengthOfMonth())
+        )
     }
 }

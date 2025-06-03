@@ -39,12 +39,12 @@ fun AddLoanScreen(
     navController: NavController,
     loan: Loan? = null
 ) {
-    var name by remember { mutableStateOf("") }
-    var principal by remember { mutableStateOf("") }
-    var interestRate by remember { mutableStateOf("") }
-    var months by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(LoanType.CREDIT) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var name by remember { mutableStateOf(loan?.name ?: "") }
+    var principal by remember { mutableStateOf(loan?.principal?.toString() ?: "") }
+    var interestRate by remember { mutableStateOf(loan?.interestRate?.toString() ?: "") }
+    var months by remember { mutableStateOf(loan?.months?.toString() ?: "") }
+    var selectedType by remember { mutableStateOf(loan?.type ?: LoanType.CREDIT) }
+    var selectedDate by remember { mutableStateOf(loan?.startDate ?: LocalDate.now()) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -65,13 +65,14 @@ fun AddLoanScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Добавить новый кредит",
+                text = if (loan == null) "Добавить новый кредит" else "Редактировать кредит",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .padding(bottom = 24.dp)
                     .align(Alignment.CenterHorizontally)
             )
+
 
             OutlinedTextField(
                 value = name,
@@ -214,21 +215,34 @@ fun AddLoanScreen(
                     val loanInterestRate = interestRate.toDoubleOrNull()
 
                     if (name.isNotBlank() && loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanPrincipal > 0 && loanMonths > 0) {
-                        val loan = Loan(
-                            name = name,
-                            type = selectedType,
-                            logo = "",
-                            interestRate = loanInterestRate,
-                            startDate = selectedDate,
-                            monthlyPaymentDay = selectedDate.dayOfMonth,
-                            principal = loanPrincipal,
-                            months = loanMonths,
-                            gracePeriodDays = null,
-                            mandatoryPaymentDay = null,
-                            gracePeriodEndDate = null,
-                            debtDueDate = null
-                        )
-                        loanViewModel.addLoan(loan)
+                        if (loan == null) {
+                            val newLoan = Loan(
+                                name = name,
+                                type = selectedType,
+                                logo = "",
+                                interestRate = loanInterestRate,
+                                startDate = selectedDate,
+                                monthlyPaymentDay = selectedDate.dayOfMonth,
+                                principal = loanPrincipal,
+                                months = loanMonths,
+                                gracePeriodDays = null,
+                                mandatoryPaymentDay = null,
+                                gracePeriodEndDate = null,
+                                debtDueDate = null
+                            )
+                            loanViewModel.addLoan(newLoan)
+                        } else {
+                            val updatedLoan = loan.copy(
+                                name = name,
+                                type = selectedType,
+                                interestRate = loanInterestRate,
+                                startDate = selectedDate,
+                                monthlyPaymentDay = selectedDate.dayOfMonth,
+                                principal = loanPrincipal,
+                                months = loanMonths
+                            )
+                            loanViewModel.updateLoan(updatedLoan)
+                        }
                         navController.popBackStack()
                     } else {
                         scope.launch {
@@ -243,7 +257,7 @@ fun AddLoanScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = fieldShape,
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -253,8 +267,12 @@ fun AddLoanScreen(
                     pressedElevation = 8.dp
                 )
             ) {
-                Text("Сохранить", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = if (loan == null) "Сохранить" else "Сохранить изменения",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
         }
