@@ -1,8 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.kreditnik.app.ui.screens
 
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +18,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.LoanViewModel
+import com.kreditnik.app.viewmodel.SettingsViewModel   // <-- добавили импорт
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import androidx.compose.material3.CenterAlignedTopAppBar
 import java.util.*
 
-/* ---------- форматируем 1 234 567 ₽ ---------- */
+/* ---------- форматируем 1 234 567 ---------- */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     return DecimalFormat("#,###", sym).format(this)
@@ -33,7 +32,7 @@ private fun Double.formatMoney(): String {
 
 /* ---------- содержимое строки ---------- */
 @Composable
-private fun LoanRowContent(loan: Loan) {
+private fun LoanRowContent(loan: Loan, currency: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -63,7 +62,7 @@ private fun LoanRowContent(loan: Loan) {
         )
 
         Text(
-            text = "${loan.principal.formatMoney()} ₽",
+            text = "${loan.principal.formatMoney()} $currency",    // <-- Используем валюту
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         )
     }
@@ -73,6 +72,7 @@ private fun LoanRowContent(loan: Loan) {
 @Composable
 private fun LoanListItem(
     loan: Loan,
+    currency: String,
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -84,16 +84,18 @@ private fun LoanListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) { LoanRowContent(loan) }
+    ) { LoanRowContent(loan, currency) }
 }
 
 /* ---------- главный экран ---------- */
 @Composable
 fun CreditsScreen(
     loanViewModel: LoanViewModel,
+    settingsViewModel: SettingsViewModel,  // <-- добавили
     navController: NavController
 ) {
     val loans by loanViewModel.loans.collectAsState()
+    val currency by settingsViewModel.defaultCurrency.collectAsState() // <-- вытаскиваем валюту
 
     /* общая сумма обновляется при любом изменении списка */
     val total by remember(loans) {
@@ -105,8 +107,8 @@ fun CreditsScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text  = "Общая сумма: $total ₽",
-                        style = MaterialTheme.typography.titleLarge   // крупнее
+                        text  = "Общая сумма: $total $currency",    // <-- показываем валюту
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
             )
@@ -122,7 +124,7 @@ fun CreditsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(loans, key = { it.id }) { loan ->
-                LoanListItem(loan)
+                LoanListItem(loan, currency)  // <-- передаем валюту в карточку
             }
         }
     }
