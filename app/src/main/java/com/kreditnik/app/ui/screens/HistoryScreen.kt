@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.viewmodel.LoanViewModel
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import java.util.Locale
 
 enum class SortOption { DATE, AMOUNT }
@@ -149,19 +151,23 @@ fun HistoryScreen(viewModel: LoanViewModel) {
         ) {
             items(sortedOperations, key = { it.id }) { operation ->
 
-                /* состояние свайпа */
-                val dismissState = rememberDismissState()
-                /* диалог редактирования / удаления */
+                /* меню действий */
                 var showMenu by remember { mutableStateOf(false) }
 
-                /* открываем меню при полном свайпе влево */
-                LaunchedEffect(dismissState.currentValue) {
-                    if (dismissState.currentValue == DismissValue.DismissedToStart) showMenu = true
-                }
+                /* состояние свайпа – возвращаем карточку назад */
+                val dismissState = rememberDismissState(
+                    confirmStateChange = { state ->
+                        if (state == DismissValue.DismissedToStart) {
+                            showMenu = true          // открываем меню
+                            false                    // карточку не удаляем
+                        } else {
+                            true
+                        }
+                    }
+                )
 
-                /* карточка со свайп-фоном */
                 SwipeToDismiss(
-                    state = dismissState,
+                    state      = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
                     background = {
                         Row(
@@ -169,9 +175,9 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                                 .fillMaxSize()
                                 .padding(end = 24.dp),
                             horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment     = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Edit,  null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(32.dp))
                             Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
                         }
@@ -179,29 +185,32 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                     dismissContent = {
                         OperationItem(
                             operation = operation,
-                            loanName = viewModel.getLoanNameById(operation.loanId),
-                            modifier = Modifier
-                                .combinedClickable(
-                                    onClick = {},
-                                    onLongClick = { showMenu = true }  // долгое нажатие
-                                )
+                            loanName  = viewModel.getLoanNameById(operation.loanId),
+                            modifier  = Modifier.combinedClickable(
+                                onClick     = {},
+                                onLongClick = { showMenu = true }
+                            )
                         )
                     }
                 )
 
-                /* всплывающее меню */
+                /* диалог действий */
                 if (showMenu) {
                     AlertDialog(
                         onDismissRequest = { showMenu = false },
-                        title = { Text("Операция") },
+                        title = { Text("Действие с операцией") },
                         confirmButton = {
                             TextButton(
                                 onClick = {
                                     showMenu = false
-                                    /* здесь вызов редактирования */
-                                    /* viewModel.editOperation(operation) */
+                                    // TODO: вызов экрана редактирования
+                                    // viewModel.updateOperation(operation)
                                 }
-                            ) { Icon(Icons.Default.Edit, null) }
+                            ) {
+                                Icon(Icons.Default.Edit, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Редактировать")
+                            }
                         },
                         dismissButton = {
                             TextButton(
@@ -209,13 +218,19 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                                     showMenu = false
                                     viewModel.deleteOperation(operation)
                                 }
-                            ) { Icon(Icons.Default.Delete, null) }
+                            ) {
+                                Icon(Icons.Default.Delete, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Удалить")
+                            }
                         }
                     )
                 }
 
                 Spacer(Modifier.height(4.dp))
             }
+
+
 
         }
     }
