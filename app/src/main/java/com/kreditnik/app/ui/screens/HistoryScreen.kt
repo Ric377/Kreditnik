@@ -143,6 +143,8 @@ fun HistoryScreen(viewModel: LoanViewModel) {
             }
         }
 
+        var editingOperation by remember { mutableStateOf<Operation?>(null) }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -151,15 +153,13 @@ fun HistoryScreen(viewModel: LoanViewModel) {
         ) {
             items(sortedOperations, key = { it.id }) { operation ->
 
-                /* меню действий */
                 var showMenu by remember { mutableStateOf(false) }
 
-                /* состояние свайпа – возвращаем карточку назад */
                 val dismissState = rememberDismissState(
                     confirmStateChange = { state ->
                         if (state == DismissValue.DismissedToStart) {
-                            showMenu = true          // открываем меню
-                            false                    // карточку не удаляем
+                            showMenu = true
+                            false
                         } else {
                             true
                         }
@@ -167,7 +167,7 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                 )
 
                 SwipeToDismiss(
-                    state      = dismissState,
+                    state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
                     background = {
                         Row(
@@ -175,26 +175,25 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                                 .fillMaxSize()
                                 .padding(end = 24.dp),
                             horizontalArrangement = Arrangement.End,
-                            verticalAlignment     = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Edit,  null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(32.dp))
-                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                         }
                     },
                     dismissContent = {
                         OperationItem(
                             operation = operation,
-                            loanName  = viewModel.getLoanNameById(operation.loanId),
-                            modifier  = Modifier.combinedClickable(
-                                onClick     = {},
+                            loanName = viewModel.getLoanNameById(operation.loanId),
+                            modifier = Modifier.combinedClickable(
+                                onClick = {},
                                 onLongClick = { showMenu = true }
                             )
                         )
                     }
                 )
 
-                /* диалог действий */
                 if (showMenu) {
                     AlertDialog(
                         onDismissRequest = { showMenu = false },
@@ -203,11 +202,10 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                             TextButton(
                                 onClick = {
                                     showMenu = false
-                                    // TODO: вызов экрана редактирования
-                                    // viewModel.updateOperation(operation)
+                                    editingOperation = operation
                                 }
                             ) {
-                                Icon(Icons.Default.Edit, null)
+                                Icon(Icons.Default.Edit, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
                                 Text("Редактировать")
                             }
@@ -219,7 +217,7 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                                     viewModel.deleteOperation(operation)
                                 }
                             ) {
-                                Icon(Icons.Default.Delete, null)
+                                Icon(Icons.Default.Delete, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
                                 Text("Удалить")
                             }
@@ -227,11 +225,20 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
             }
+        }
 
-
-
+// -------- ЭТО ВНЕ LazyColumn!!! -----------
+        editingOperation?.let { op ->
+            EditOperationDialog(
+                op,
+                onDismiss = { editingOperation = null },
+                onSave = {
+                    viewModel.updateOperation(it)
+                    editingOperation = null
+                }
+            )
         }
     }
 }
@@ -300,4 +307,34 @@ fun OperationItem(operation: Operation, loanName: String, modifier: Modifier = M
             )
         }
     }
+}
+
+@Composable
+fun EditOperationDialog(
+    op: Operation,
+    onDismiss: () -> Unit,
+    onSave: (Operation) -> Unit
+) {
+    var amount by remember { mutableStateOf(op.amount.toString()) }
+    var desc   by remember { mutableStateOf(op.description.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Редактировать операцию") },
+        text  = {
+            Column {
+                OutlinedTextField(amount, { amount = it }, label = { Text("Сумма") })
+                OutlinedTextField(desc,   { desc   = it }, label = { Text("Описание") })
+            }
+        },
+        confirmButton = {
+            TextButton({
+                onSave(op.copy(
+                    amount      = amount.toDoubleOrNull() ?: op.amount,
+                    description = desc
+                ))
+            }) { Text("Сохранить") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("Отмена") } }
+    )
 }
