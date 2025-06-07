@@ -81,7 +81,7 @@ fun OperationItem(operation: Operation) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = operation.date.toString(), // Дату можно отформатировать позже
+                    text = operation.date.format(dateFormatter),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
