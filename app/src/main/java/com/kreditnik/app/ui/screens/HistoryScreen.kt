@@ -141,6 +141,14 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                     loanName = viewModel.getLoanNameById(operation.loanId),
                     index = index
                 )
+
+                if (index != sortedOperations.lastIndex) {
+                    Divider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
     }
@@ -150,22 +158,20 @@ private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
 @Composable
 fun OperationItem(operation: Operation, loanName: String, index: Int) {
-    val backgroundColor = if (index % 2 == 0) {
-        MaterialTheme.colorScheme.surfaceContainerLowest
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 0.dp, vertical = 4.dp) // горизонтальные паддинги у LazyColumn теперь есть!
+            .padding(horizontal = 0.dp, vertical = 4.dp)
     ) {
-        Row(
+
+    Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
