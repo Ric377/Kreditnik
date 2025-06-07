@@ -146,11 +146,8 @@ fun LoanDetailScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))   // ⬅️ 8.dp между иконкой и текстом
-                    Text(
-                        text = "Добавить",
-                        maxLines = 1
-                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Добавить", maxLines = 1)
                 }
 
                 Button(
@@ -159,17 +156,27 @@ fun LoanDetailScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))   // ⬅️ 8.dp между иконкой и текстом
-                    Text(
-                        text = "Погасить",
-                        maxLines = 1
-                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Погасить", maxLines = 1)
                 }
+            }
+
+// 🎯 А вот кнопку графика вынести ВНЕ Row:
+            Spacer(modifier = Modifier.height(16.dp)) // Немного воздуха между рядами
+
+            Button(
+                onClick = {
+                    navController.navigate("paymentSchedule/${loan.id}")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("📊 График платежей")
             }
         }
     }
-
-    // 🔥 Диалоги В КОНЦЕ ФУНКЦИИ, после Scaffold
 
     if (showAddDialog.value) {
         AlertDialog(

@@ -149,6 +149,14 @@ fun MainScreen(
                     )
                 }
             }
+
+            composable(
+                route = "paymentSchedule/{loanId}",
+                arguments = listOf(navArgument("loanId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val loanId = backStackEntry.arguments?.getLong("loanId") ?: return@composable
+                PaymentScheduleScreen(loanViewModel, loanId)
+            }
         }
     }
 }
