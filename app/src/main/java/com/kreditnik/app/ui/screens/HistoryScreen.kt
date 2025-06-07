@@ -2,16 +2,14 @@ package com.kreditnik.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -137,8 +135,12 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            items(sortedOperations) { operation ->
-                OperationItem(operation, viewModel.getLoanNameById(operation.loanId))
+            itemsIndexed(sortedOperations) { index, operation ->
+                OperationItem(
+                    operation = operation,
+                    loanName = viewModel.getLoanNameById(operation.loanId),
+                    index = index
+                )
             }
         }
     }
@@ -147,20 +149,26 @@ fun HistoryScreen(viewModel: LoanViewModel) {
 private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
 @Composable
-fun OperationItem(operation: Operation, loanName: String) {
+fun OperationItem(operation: Operation, loanName: String, index: Int) {
+    val backgroundColor = if (index % 2 == 0) {
+        MaterialTheme.colorScheme.surfaceContainerLowest
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = backgroundColor
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp) // ✅ исправлено
+            .padding(horizontal = 0.dp, vertical = 4.dp) // горизонтальные паддинги у LazyColumn теперь есть!
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 0.dp, vertical = 12.dp), // ✅ исправлено
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -176,7 +184,7 @@ fun OperationItem(operation: Operation, loanName: String) {
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp)) // ✅ исправлено
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -195,21 +203,17 @@ fun OperationItem(operation: Operation, loanName: String) {
                 )
             }
 
-            val successColor = MaterialTheme.colorScheme.tertiaryContainer
-            val dangerColor = MaterialTheme.colorScheme.error
-
             Text(
-                text = String.format(
-                    "%+,.2f ₽", operation.amount
-                ),
+                text = String.format("%+,.2f ₽", operation.amount),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold
                 ),
                 color = if (operation.amount < 0)
-                    MaterialTheme.colorScheme.tertiary  // Погашение
+                    MaterialTheme.colorScheme.tertiary
                 else
-                    MaterialTheme.colorScheme.error     // Взятие долга
+                    MaterialTheme.colorScheme.error
             )
         }
     }
 }
+
