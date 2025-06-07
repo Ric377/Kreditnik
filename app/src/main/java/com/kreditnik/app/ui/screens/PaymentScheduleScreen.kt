@@ -43,12 +43,16 @@ fun PaymentScheduleScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp),   // как в истории операций
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(innerPadding)                    // отступ под AppBar
+                .padding(horizontal = 16.dp, vertical = 8.dp), // как в HistoryScreen
+            // spacing между карточками будет через Spacer(4.dp)
         ) {
             items(schedule) { item ->
                 PaymentItem(item)
+                Spacer(modifier = Modifier.height(4.dp)) // точно как в истории операций
+            }
+            item {
+                TotalSummary(schedule)
             }
         }
     }
@@ -61,11 +65,13 @@ fun PaymentItem(item: PaymentScheduleItem) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 0.dp, vertical = 4.dp) // mirror OperationItem external padding
             .clickable { expanded = !expanded },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
@@ -73,6 +79,7 @@ fun PaymentItem(item: PaymentScheduleItem) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Номер в кружке + дата
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = CircleShape,
@@ -81,8 +88,8 @@ fun PaymentItem(item: PaymentScheduleItem) {
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                text = "${item.monthNumber}",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = item.monthNumber.toString(),
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -93,6 +100,7 @@ fun PaymentItem(item: PaymentScheduleItem) {
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
+                // Платеж + остаток
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "${item.totalPayment.formatMoney()} ₽",
@@ -116,6 +124,48 @@ fun PaymentItem(item: PaymentScheduleItem) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+        }
+    }
+}
+
+
+@Composable
+fun TotalSummary(schedule: List<PaymentScheduleItem>) {
+    val totalPrincipal = schedule.sumOf { it.principalPart }
+    val totalInterest = schedule.sumOf { it.interestPart }
+    val totalPayment = totalPrincipal + totalInterest
+
+    Spacer(Modifier.height(4.dp)) // как между карточками
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+        ),
+        elevation = CardDefaults.cardElevation(0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp) // mirror item padding
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = "Итого",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Основной долг: ${totalPrincipal.formatMoney()} ₽",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Проценты: ${totalInterest.formatMoney()} ₽",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Всего: ${totalPayment.formatMoney()} ₽",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
         }
     }
 }
