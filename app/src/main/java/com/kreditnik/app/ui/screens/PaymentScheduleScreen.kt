@@ -9,14 +9,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kreditnik.app.viewmodel.LoanViewModel
-import com.kreditnik.app.ui.screens.PaymentScheduleItem
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentScheduleScreen(
     loanViewModel: LoanViewModel,
@@ -26,12 +27,28 @@ fun PaymentScheduleScreen(
     val loan = loans.firstOrNull { it.id == loanId } ?: return
     val schedule = loanViewModel.calculatePaymentSchedule(loan)
 
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(schedule) { item ->
-            PaymentItem(item)
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "График платежей",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp),   // как в истории операций
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(schedule) { item ->
+                PaymentItem(item)
+            }
         }
     }
 }
@@ -49,28 +66,45 @@ fun PaymentItem(item: PaymentScheduleItem) {
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
         )
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("#${item.monthNumber}")
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("${item.totalPayment.formatMoney()} ₽")
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        item.paymentDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
-                        style = MaterialTheme.typography.labelSmall
+                        text = "${item.monthNumber}",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(end = 8.dp)
                     )
                     Text(
-                        "Остаток: ${item.remainingPrincipal.formatMoney()} ₽",
-                        style = MaterialTheme.typography.labelSmall
+                        text = item.paymentDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "${item.totalPayment.formatMoney()} ₽",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Остаток: ${item.remainingPrincipal.formatMoney()} ₽",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
-                Text("Основной долг: ${item.principalPart.formatMoney()} ₽")
-                Text("Проценты: ${item.interestPart.formatMoney()} ₽")
+                Text(
+                    text = "Основной долг: ${item.principalPart.formatMoney()} ₽",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Проценты: ${item.interestPart.formatMoney()} ₽",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
