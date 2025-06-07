@@ -25,12 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kreditnik.app.data.DatabaseProvider
 import com.kreditnik.app.data.LoanRepository
-import com.kreditnik.app.ui.screens.AddLoanScreen
-import com.kreditnik.app.ui.screens.AnalyticsScreen
-import com.kreditnik.app.ui.screens.CreditsScreen
-import com.kreditnik.app.ui.screens.HistoryScreen
-import com.kreditnik.app.ui.screens.SettingsScreen
-import com.kreditnik.app.ui.screens.LoanDetailScreen
+import com.kreditnik.app.ui.screens.*
 import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
@@ -38,9 +33,11 @@ import com.kreditnik.app.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
     private val loanViewModel: LoanViewModel by viewModels {
+        val database = DatabaseProvider.getDatabase(applicationContext)
         LoanViewModelFactory(
             LoanRepository(
-                DatabaseProvider.getDatabase(applicationContext).loanDao()
+                loanDao = database.loanDao(),
+                operationDao = database.operationDao()
             )
         )
     }
@@ -111,7 +108,8 @@ fun MainScreen(
                 )
             }
             composable(BottomNavItem.History.route) {
-                HistoryScreen()
+                // ВАЖНО: сюда передаем loanViewModel
+                HistoryScreen(viewModel = loanViewModel)
             }
             composable(BottomNavItem.Analytics.route) {
                 AnalyticsScreen()

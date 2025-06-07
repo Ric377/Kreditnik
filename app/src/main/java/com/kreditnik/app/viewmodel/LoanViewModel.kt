@@ -7,6 +7,7 @@ import com.kreditnik.app.data.LoanRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.kreditnik.app.data.Operation
 
 class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
@@ -15,6 +16,22 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
     init {
         loadLoans()
+    }
+
+    private val _operations = MutableStateFlow<List<Operation>>(emptyList())
+    val operations: StateFlow<List<Operation>> get() = _operations
+
+    fun loadOperations() {
+        viewModelScope.launch {
+            _operations.value = repository.getAllOperations()
+        }
+    }
+
+    fun addOperation(operation: Operation) {
+        viewModelScope.launch {
+            repository.insertOperation(operation)
+            loadOperations()
+        }
     }
 
     private fun loadLoans() {

@@ -2,32 +2,48 @@ package com.kreditnik.app.data
 
 import androidx.room.TypeConverter
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class Converters {
-    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE
 
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+    // LocalDate converters
     @TypeConverter
-    fun fromLocalDate(date: LocalDate?): String? {
-        return date?.format(formatter)
+    fun fromLocalDate(value: LocalDate?): String? {
+        return value?.format(dateFormatter)
     }
 
     @TypeConverter
-    fun toLocalDate(dateString: String?): LocalDate? {
-        return dateString?.let {
-            LocalDate.parse(it, formatter)
+    fun toLocalDate(value: String?): LocalDate? {
+        return value?.let {
+            LocalDate.parse(it, dateFormatter)
         }
     }
 
+    // LocalDateTime converters
     @TypeConverter
-    fun fromLoanType(type: LoanType?): String? {
-        return type?.name
+    fun fromLocalDateTime(value: LocalDateTime?): String? {
+        return value?.format(dateTimeFormatter)
     }
 
     @TypeConverter
-    fun toLoanType(name: String?): LoanType? {
-        return name?.let {
-            LoanType.valueOf(it)
+    fun toLocalDateTime(value: String?): LocalDateTime? {
+        return value?.let {
+            LocalDateTime.parse(it, dateTimeFormatter)
         }
+    }
+
+    // OperationType converters
+    @TypeConverter
+    fun fromOperationType(value: OperationType?): String? {
+        return value?.name
+    }
+
+    @TypeConverter
+    fun toOperationType(value: String?): OperationType? {
+        return value?.let { OperationType.valueOf(it) }
     }
 }

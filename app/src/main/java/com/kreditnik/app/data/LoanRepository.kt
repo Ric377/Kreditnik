@@ -1,10 +1,26 @@
 package com.kreditnik.app.data
 
-class LoanRepository(private val loanDao: LoanDao) {
+class LoanRepository(
+    private val loanDao: LoanDao,
+    private val operationDao: OperationDao
+) {
 
     suspend fun insertLoan(loan: Loan) {
         loanDao.insertLoan(loan)
     }
+
+    suspend fun insertOperation(operation: Operation) {
+        operationDao.insertOperation(operation)
+    }
+
+    suspend fun getOperationsForLoan(loanId: Long): List<Operation> {
+        return operationDao.getOperationsForLoan(loanId)
+    }
+
+    suspend fun getAllOperations(): List<Operation> {
+        return operationDao.getAllOperations()
+    }
+
 
     suspend fun getAllLoans(): List<Loan> {
         return loanDao.getAllLoans()

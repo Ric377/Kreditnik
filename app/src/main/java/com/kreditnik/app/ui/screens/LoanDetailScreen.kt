@@ -19,6 +19,18 @@ import java.text.DecimalFormatSymbols
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import com.kreditnik.app.data.Operation
+import com.kreditnik.app.data.OperationType
+import java.time.LocalDateTime
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +42,9 @@ fun LoanDetailScreen(
 ) {
     val currency by settingsViewModel.defaultCurrency.collectAsState()
     val expandedMenu = remember { mutableStateOf(false) }
+    val showAddDialog = remember { mutableStateOf(false) }
+    val showPayDialog = remember { mutableStateOf(false) }
+    val amountInput = remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -97,9 +112,131 @@ fun LoanDetailScreen(
                     )
                 }
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { showAddDialog.value = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Добавить долг")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Добавить долг")
+                }
+
+                Button(
+                    onClick = { showPayDialog.value = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary  // ❗ тоже primary
+                    )
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "Погасить долг")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Погасить долг")
+                }
+            }
         }
     }
+
+    // 🔥 Диалоги В КОНЦЕ ФУНКЦИИ, после Scaffold
+
+    if (showAddDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showAddDialog.value = false },
+            title = { Text("Добавить долг") },
+            text = {
+                OutlinedTextField(
+                    value = amountInput.value,
+                    onValueChange = { amountInput.value = it },
+                    label = { Text("Сумма") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amount = amountInput.value.toDoubleOrNull() ?: 0.0
+                        if (amount > 0) {
+                            loanViewModel.addOperation(
+                                Operation(
+                                    loanId = loan.id,
+                                    amount = amount,
+                                    date = LocalDateTime.now(),
+                                    type = OperationType.OTHER,
+                                    description = "Добавление долга"
+                                )
+                            )
+                        }
+                        amountInput.value = ""
+                        showAddDialog.value = false
+                    }
+                ) {
+                    Text("Добавить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAddDialog.value = false
+                    amountInput.value = ""
+                }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    if (showPayDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showPayDialog.value = false },
+            title = { Text("Погасить долг") },
+            text = {
+                OutlinedTextField(
+                    value = amountInput.value,
+                    onValueChange = { amountInput.value = it },
+                    label = { Text("Сумма") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amount = amountInput.value.toDoubleOrNull() ?: 0.0
+                        if (amount > 0) {
+                            loanViewModel.addOperation(
+                                Operation(
+                                    loanId = loan.id,
+                                    amount = -amount,
+                                    date = LocalDateTime.now(),
+                                    type = OperationType.PAYMENT,
+                                    description = "Погашение долга"
+                                )
+                            )
+                        }
+                        amountInput.value = ""
+                        showPayDialog.value = false
+                    }
+                ) {
+                    Text("Погасить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPayDialog.value = false
+                    amountInput.value = ""
+                }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 private fun LoanDetailItem(label: String, value: String) {
