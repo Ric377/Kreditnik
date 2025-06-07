@@ -93,16 +93,26 @@ fun LoanDetailScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize()
+                .padding(innerPadding)                           // от TopAppBar / NavBar
+                .padding(horizontal = 0.dp, vertical = 8.dp),    // точь-в-точь как в History/Credits
+            verticalArrangement = Arrangement.spacedBy(4.dp)      // 4.dp между блоками, как в списках
         ) {
             Card(
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(16.dp),                      // как в списках
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+                ),
+                elevation = CardDefaults.cardElevation(0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)       // картинка-в-картинке: 16dp по бокам, 4dp сверху/снизу
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp) // внутренние отступы: 16/12 dp как в списках
+                ) {
                     LoanDetailItem("Тип кредита", loan.type.displayName)
                     LoanDetailItem("Сумма", "${loan.principal.formatMoney()} $currency")
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
@@ -125,8 +135,10 @@ fun LoanDetailScreen(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),   // только по бокам
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = { showAddDialog.value = true },
