@@ -18,10 +18,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.LoanViewModel
-import com.kreditnik.app.viewmodel.SettingsViewModel   // <-- добавили импорт
+import com.kreditnik.app.viewmodel.SettingsViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Text
 import java.util.*
 
 /* ---------- форматируем 1 234 567 ---------- */
@@ -109,13 +112,20 @@ fun CreditsScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text  = "Общая сумма: $total $currency",    // <-- показываем валюту
-                        style = MaterialTheme.typography.titleLarge
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(
+                                text = "Общая сумма: $total $currency",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                        }
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+
                 }
             )
         },
+
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("addLoan") }) {
                 Icon(Icons.Default.Add, contentDescription = "Добавить кредит")

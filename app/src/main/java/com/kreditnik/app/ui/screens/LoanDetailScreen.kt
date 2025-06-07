@@ -30,6 +30,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,8 +54,13 @@ fun LoanDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(loan.name) },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = loan.name,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                },
                 actions = {
                     IconButton(onClick = { expandedMenu.value = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Меню действий")

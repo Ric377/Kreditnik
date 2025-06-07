@@ -2,6 +2,10 @@ package com.kreditnik.app.ui.screens
 
 import androidx.compose.runtime.Composable
 import com.kreditnik.app.ui.components.CenteredText
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,29 +26,45 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.AccountBalance
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(viewModel: LoanViewModel) {
     val operations by viewModel.operations.collectAsState()
 
     viewModel.loadOperations()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        item {
-            Text(
-                text = "История операций",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "История операций",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
             )
         }
-        items(operations) { operation ->
-            OperationItem(operation, viewModel.getLoanNameById(operation.loanId))
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            items(operations) { operation ->
+                OperationItem(operation, viewModel.getLoanNameById(operation.loanId))
+            }
         }
     }
 }

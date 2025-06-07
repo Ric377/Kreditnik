@@ -26,6 +26,8 @@ import com.kreditnik.app.viewmodel.LoanViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Text
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,17 +67,28 @@ fun AddLoanScreen(
 
     // ==== UI ====
     Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = if (loan == null) "Добавить кредит" else "Редактировать кредит",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp) // Везде одинаковые отступы
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp) // теперь между каждым прямым потомком будет по 12.dp
+            verticalArrangement = Arrangement.spacedBy(16.dp) // Тоже одинаково
         ) {
-            // ==== БЛОК 1: Название кредита ====
+            // Здесь начинается форма: OutlinedTextField, DropdownMenu и так далее
+
             OutlinedTextField(
                 value = name,
                 onValueChange = {
