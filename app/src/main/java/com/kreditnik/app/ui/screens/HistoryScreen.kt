@@ -12,6 +12,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.viewmodel.LoanViewModel
+import java.time.format.DateTimeFormatter
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.ui.text.font.FontWeight
+
+
+
+
 
 @Composable
 fun HistoryScreen(viewModel: LoanViewModel) {
@@ -28,18 +40,66 @@ fun HistoryScreen(viewModel: LoanViewModel) {
     }
 }
 
+private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
+
 @Composable
 fun OperationItem(operation: Operation) {
-    Column(
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(text = operation.type.name, style = MaterialTheme.typography.titleMedium)
-        Text(text = "${operation.amount} ₽", style = MaterialTheme.typography.bodyLarge)
-        Text(text = operation.date.toString(), style = MaterialTheme.typography.bodySmall)
-        operation.description?.let {
-            Text(text = it, style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = Modifier
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Иконка операции
+            Icon(
+                imageVector = if (operation.amount < 0)
+                    Icons.Filled.Remove else Icons.Filled.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Текст
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = operation.description ?: "Без описания",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = operation.date.toString(), // Дату можно отформатировать позже
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Сумма
+            Text(
+                text = String.format(
+                    "%+,.2f ₽", operation.amount
+                ),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = if (operation.amount > 0)
+                    MaterialTheme.colorScheme.tertiary
+                else
+                    MaterialTheme.colorScheme.error
+            )
         }
     }
 }
