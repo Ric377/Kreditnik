@@ -21,7 +21,6 @@ class LoanRepository(
         return operationDao.getAllOperations()
     }
 
-
     suspend fun getAllLoans(): List<Loan> {
         return loanDao.getAllLoans()
     }
@@ -32,5 +31,9 @@ class LoanRepository(
 
     suspend fun deleteLoan(loan: Loan) {
         loanDao.deleteLoan(loan)
+    }
+
+    suspend fun getLoanById(id: Long): Loan? {
+        return loanDao.getLoanById(id)
     }
 }

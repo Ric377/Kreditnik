@@ -141,7 +141,7 @@ fun LoanDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { /* Добавить долг */ },
+                    onClick = { showAddDialog.value = true },
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -154,7 +154,7 @@ fun LoanDetailScreen(
                 }
 
                 Button(
-                    onClick = { /* Погасить долг */ },
+                    onClick = { showPayDialog.value = true },
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -197,6 +197,7 @@ fun LoanDetailScreen(
                                     description = "Добавление долга"
                                 )
                             )
+                            loanViewModel.updateLoanPrincipal(loan.id, amount)  // <--- вот это добавить
                         }
                         amountInput.value = ""
                         showAddDialog.value = false
@@ -242,6 +243,7 @@ fun LoanDetailScreen(
                                     description = "Погашение долга"
                                 )
                             )
+                            loanViewModel.updateLoanPrincipal(loan.id, -amount)
                         }
                         amountInput.value = ""
                         showPayDialog.value = false

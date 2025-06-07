@@ -61,6 +61,17 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
         }
     }
 
+    fun updateLoanPrincipal(loanId: Long, delta: Double) {
+        viewModelScope.launch {
+            val loan = repository.getLoanById(loanId)
+            if (loan != null) {
+                val updatedLoan = loan.copy(principal = loan.principal + delta)
+                repository.updateLoan(updatedLoan)
+                loadLoans() // чтобы обновился список кредитов
+            }
+        }
+    }
+
     fun getLoanNameById(loanId: Long): String {
         return _loans.value.firstOrNull { it.id == loanId }?.name ?: "Неизвестный кредит"
     }

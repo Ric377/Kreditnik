@@ -15,4 +15,8 @@ interface LoanDao {
 
     @Query("SELECT * FROM loans ORDER BY startDate DESC")
     suspend fun getAllLoans(): List<Loan>
+
+    @Query("SELECT * FROM loans WHERE id = :id")
+    suspend fun getLoanById(id: Long): Loan?
+
 }
