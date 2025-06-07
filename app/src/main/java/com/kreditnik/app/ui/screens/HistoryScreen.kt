@@ -1,42 +1,29 @@
 package com.kreditnik.app.ui.screens
 
-import androidx.compose.runtime.Composable
-import com.kreditnik.app.ui.components.CenteredText
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.viewmodel.LoanViewModel
 import java.time.format.DateTimeFormatter
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.AccountBalance
+enum class SortOption { DATE, AMOUNT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +31,15 @@ fun HistoryScreen(viewModel: LoanViewModel) {
     val operations by viewModel.operations.collectAsState()
 
     viewModel.loadOperations()
+
+    var selectedSort by remember { mutableStateOf(SortOption.DATE) }
+    var sortAscending by remember { mutableStateOf(false) }
+
+    var expandedSort by remember { mutableStateOf(false) }
+
+    val allLoans = viewModel.loans.collectAsState().value
+    var selectedLoanId by remember { mutableStateOf<Long?>(null) }
+    var expandedLoanFilter by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -53,16 +49,95 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                         text = "История операций",
                         style = MaterialTheme.typography.headlineSmall
                     )
+                },
+                actions = {
+                    // Кнопка сортировки
+                    IconButton(onClick = { expandedSort = true }) {
+                        Icon(Icons.Default.Sort, contentDescription = "Сортировка")
+                    }
+                    DropdownMenu(
+                        expanded = expandedSort,
+                        onDismissRequest = { expandedSort = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Дата") },
+                            onClick = {
+                                selectedSort = SortOption.DATE
+                                expandedSort = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Сумма") },
+                            onClick = {
+                                selectedSort = SortOption.AMOUNT
+                                expandedSort = false
+                            }
+                        )
+                    }
+
+                    // Кнопка фильтра по кредиту
+                    IconButton(onClick = { expandedLoanFilter = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Фильтр по кредиту")
+                    }
+                    DropdownMenu(
+                        expanded = expandedLoanFilter,
+                        onDismissRequest = { expandedLoanFilter = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Все кредиты") },
+                            onClick = {
+                                selectedLoanId = null
+                                expandedLoanFilter = false
+                            }
+                        )
+                        allLoans.forEach { loan ->
+                            DropdownMenuItem(
+                                text = { Text(loan.name) },
+                                onClick = {
+                                    selectedLoanId = loan.id
+                                    expandedLoanFilter = false
+                                }
+                            )
+                        }
+                    }
+
+                    // Кнопка смены направления сортировки
+                    IconButton(onClick = { sortAscending = !sortAscending }) {
+                        Icon(
+                            imageVector = if (sortAscending) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                            contentDescription = "Смена направления"
+                        )
+                    }
                 }
             )
         }
     ) { innerPadding ->
+        val filteredOperations = if (selectedLoanId != null) {
+            operations.filter { it.loanId == selectedLoanId }
+        } else {
+            operations
+        }
+
+        val sortedOperations = when (selectedSort) {
+            SortOption.DATE -> if (sortAscending) {
+                filteredOperations.sortedBy { it.date }
+            } else {
+                filteredOperations.sortedByDescending { it.date }
+            }
+            SortOption.AMOUNT -> if (sortAscending) {
+                filteredOperations.sortedBy { it.amount }
+            } else {
+                filteredOperations.sortedByDescending { it.amount }
+            }
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            items(operations) { operation ->
+            items(sortedOperations) { operation ->
                 OperationItem(operation, viewModel.getLoanNameById(operation.loanId))
             }
         }
