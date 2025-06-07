@@ -11,6 +11,16 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.DismissDirection
+import androidx.compose.material.DismissValue
+import androidx.compose.material.rememberDismissState
+
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +34,11 @@ import java.util.Locale
 
 enum class SortOption { DATE, AMOUNT }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterialApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun HistoryScreen(viewModel: LoanViewModel) {
     val operations by viewModel.operations.collectAsState()
@@ -133,13 +147,76 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            items(sortedOperations) { operation ->
-                OperationItem(
-                    operation = operation,
-                    loanName = viewModel.getLoanNameById(operation.loanId),
+            items(sortedOperations, key = { it.id }) { operation ->
+
+                /* состояние свайпа */
+                val dismissState = rememberDismissState()
+                /* диалог редактирования / удаления */
+                var showMenu by remember { mutableStateOf(false) }
+
+                /* открываем меню при полном свайпе влево */
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue == DismissValue.DismissedToStart) showMenu = true
+                }
+
+                /* карточка со свайп-фоном */
+                SwipeToDismiss(
+                    state = dismissState,
+                    directions = setOf(DismissDirection.EndToStart),
+                    background = {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(end = 24.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(32.dp))
+                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissContent = {
+                        OperationItem(
+                            operation = operation,
+                            loanName = viewModel.getLoanNameById(operation.loanId),
+                            modifier = Modifier
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { showMenu = true }  // долгое нажатие
+                                )
+                        )
+                    }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+
+                /* всплывающее меню */
+                if (showMenu) {
+                    AlertDialog(
+                        onDismissRequest = { showMenu = false },
+                        title = { Text("Операция") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showMenu = false
+                                    /* здесь вызов редактирования */
+                                    /* viewModel.editOperation(operation) */
+                                }
+                            ) { Icon(Icons.Default.Edit, null) }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.deleteOperation(operation)
+                                }
+                            ) { Icon(Icons.Default.Delete, null) }
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
             }
+
         }
     }
 }

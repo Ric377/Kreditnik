@@ -13,4 +13,11 @@ interface OperationDao {
 
     @Query("SELECT * FROM operations ORDER BY date DESC")
     suspend fun getAllOperations(): List<Operation>
+
+    @Update
+    suspend fun updateOperation(operation: Operation)
+
+    @Delete
+    suspend fun deleteOperation(operation: Operation)
+
 }

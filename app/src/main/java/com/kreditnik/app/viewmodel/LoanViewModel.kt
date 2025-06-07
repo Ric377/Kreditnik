@@ -13,129 +13,117 @@ import java.time.LocalDate
 
 class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
+    /* ---------- кредиты ---------- */
+
     private val _loans = MutableStateFlow<List<Loan>>(emptyList())
     val loans: StateFlow<List<Loan>> get() = _loans
 
-    init {
-        loadLoans()
-    }
+    /* ---------- операции ---------- */
 
     private val _operations = MutableStateFlow<List<Operation>>(emptyList())
     val operations: StateFlow<List<Operation>> get() = _operations
 
-    fun loadOperations() {
-        viewModelScope.launch {
-            _operations.value = repository.getAllOperations()
-        }
+    /* ---------- init ---------- */
+
+    init {
+        loadLoans()
+        loadOperations()
     }
 
-    fun addOperation(operation: Operation) {
-        viewModelScope.launch {
-            repository.insertOperation(operation)
-            loadOperations()
-        }
+    /* ---------- загрузка ---------- */
+
+    private fun loadLoans() = viewModelScope.launch {
+        _loans.value = repository.getAllLoans()
     }
 
-    private fun loadLoans() {
-        viewModelScope.launch {
-            _loans.value = repository.getAllLoans()
-        }
+    fun loadOperations() = viewModelScope.launch {
+        _operations.value = repository.getAllOperations()
     }
 
-    fun addLoan(loan: Loan) {
-        viewModelScope.launch {
-            repository.insertLoan(loan)
+    /* ---------- работа с кредитами ---------- */
+
+    fun addLoan(loan: Loan) = viewModelScope.launch {
+        repository.insertLoan(loan)
+        loadLoans()
+    }
+
+    fun updateLoan(loan: Loan) = viewModelScope.launch {
+        repository.updateLoan(loan)
+        loadLoans()
+    }
+
+    fun deleteLoan(loan: Loan) = viewModelScope.launch {
+        repository.deleteLoan(loan)
+        loadLoans()
+    }
+
+    fun updateLoanPrincipal(loanId: Long, delta: Double) = viewModelScope.launch {
+        repository.getLoanById(loanId)?.let { loan ->
+            repository.updateLoan(loan.copy(principal = loan.principal + delta))
             loadLoans()
         }
     }
 
-    fun updateLoan(loan: Loan) {
-        viewModelScope.launch {
-            repository.updateLoan(loan)
-            loadLoans()
-        }
+    fun getLoanNameById(loanId: Long): String =
+        _loans.value.firstOrNull { it.id == loanId }?.name ?: "Неизвестный кредит"
+
+    /* ---------- работа с операциями ---------- */
+
+    fun addOperation(operation: Operation) = viewModelScope.launch {
+        repository.insertOperation(operation)
+        updateLoanPrincipal(operation.loanId, operation.amount)
+        loadOperations()
     }
 
-    fun deleteLoan(loan: Loan) {
-        viewModelScope.launch {
-            repository.deleteLoan(loan)
-            loadLoans()
-        }
+    fun updateOperation(operation: Operation) = viewModelScope.launch {
+        repository.updateOperation(operation)
+        loadOperations()
     }
 
-    fun updateLoanPrincipal(loanId: Long, delta: Double) {
-        viewModelScope.launch {
-            val loan = repository.getLoanById(loanId)
-            if (loan != null) {
-                val updatedLoan = loan.copy(principal = loan.principal + delta)
-                repository.updateLoan(updatedLoan)
-                loadLoans() // чтобы обновился список кредитов
-            }
-        }
+    fun deleteOperation(operation: Operation) = viewModelScope.launch {
+        repository.deleteOperation(operation)
+        updateLoanPrincipal(operation.loanId, -operation.amount)
+        loadOperations()
     }
 
-    fun getLoanNameById(loanId: Long): String {
-        return _loans.value.firstOrNull { it.id == loanId }?.name ?: "Неизвестный кредит"
-    }
+    /* ---------- график платежей ---------- */
 
     fun calculatePaymentSchedule(loan: Loan): List<PaymentScheduleItem> {
         val schedule = mutableListOf<PaymentScheduleItem>()
+        var remaining = loan.principal
+        var date = loan.startDate.plusMonths(1)
+        val monthlyPay = monthlyPayment(loan.principal, loan.interestRate, loan.months)
 
-        val principal = loan.principal
-        val months = loan.months
-        val annualRate = loan.interestRate
+        repeat(loan.months) { month ->
+            val days = date.lengthOfMonth()
+            val interest = remaining * (loan.interestRate / 100) / 365 * days
+            val principalPart = monthlyPay - interest
 
-        val monthlyPayment = calculateMonthlyPayment(principal, annualRate, months)
+            val isLast = remaining <= principalPart
+            val totalPay = if (isLast) remaining + interest else monthlyPay
+            val nextRemaining = if (isLast) 0.0 else remaining - principalPart
 
-        var remainingPrincipal = principal
-        var paymentDate = loan.startDate.plusMonths(1)
+            schedule += PaymentScheduleItem(
+                monthNumber = month + 1,
+                paymentDate = date,
+                totalPayment = totalPay,
+                principalPart = if (isLast) remaining else principalPart,
+                interestPart = interest,
+                remainingPrincipal = nextRemaining
+            )
 
-        for (i in 1..months) {
-            val daysInMonth = paymentDate.lengthOfMonth()
-
-            val monthlyInterest = remainingPrincipal * (annualRate / 100) / 365 * daysInMonth
-            val principalPayment = monthlyPayment - monthlyInterest
-
-            if (remainingPrincipal < principalPayment) {
-                // Последний платёж, если остался небольшой остаток
-                schedule.add(
-                    PaymentScheduleItem(
-                        monthNumber = i,
-                        paymentDate = paymentDate,
-                        totalPayment = remainingPrincipal + monthlyInterest,
-                        principalPart = remainingPrincipal,
-                        interestPart = monthlyInterest,
-                        remainingPrincipal = 0.0
-                    )
-                )
-                break
-            } else {
-                schedule.add(
-                    PaymentScheduleItem(
-                        monthNumber = i,
-                        paymentDate = paymentDate,
-                        totalPayment = monthlyPayment,
-                        principalPart = principalPayment,
-                        interestPart = monthlyInterest,
-                        remainingPrincipal = remainingPrincipal - principalPayment
-                    )
-                )
-                remainingPrincipal -= principalPayment
-            }
-
-            paymentDate = paymentDate.plusMonths(1)
+            if (isLast) return schedule
+            remaining = nextRemaining
+            date = date.plusMonths(1)
         }
-
         return schedule
     }
 
-    private fun calculateMonthlyPayment(principal: Double, annualRate: Double, months: Int): Double {
-        val monthlyRate = (annualRate / 100) / 12
-        return if (monthlyRate == 0.0) {
-            principal / months
-        } else {
-            principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) /
-                    (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
-        }
+    private fun monthlyPayment(principal: Double, annualRate: Double, months: Int): Double {
+        val mRate = annualRate / 100 / 12
+        return if (mRate == 0.0) principal / months
+        else principal * mRate * (1 + mRate).pow(months) / ((1 + mRate).pow(months) - 1)
     }
+
+    private fun Double.pow(n: Int) = Math.pow(this, n.toDouble())
 }

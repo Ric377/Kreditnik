@@ -36,4 +36,12 @@ class LoanRepository(
     suspend fun getLoanById(id: Long): Loan? {
         return loanDao.getLoanById(id)
     }
+
+    suspend fun updateOperation(operation: Operation) {
+        operationDao.updateOperation(operation)
+    }
+
+    suspend fun deleteOperation(operation: Operation) {
+        operationDao.deleteOperation(operation)
+    }
 }
