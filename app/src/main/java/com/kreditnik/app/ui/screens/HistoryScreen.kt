@@ -120,6 +120,9 @@ fun OperationItem(operation: Operation, loanName: String) {
                 )
             }
 
+            val successColor = MaterialTheme.colorScheme.tertiaryContainer
+            val dangerColor = MaterialTheme.colorScheme.error
+
             Text(
                 text = String.format(
                     "%+,.2f ₽", operation.amount
@@ -128,9 +131,9 @@ fun OperationItem(operation: Operation, loanName: String) {
                     fontWeight = FontWeight.Bold
                 ),
                 color = if (operation.amount < 0)
-                    MaterialTheme.colorScheme.tertiary // Погашение → зелёный
+                    MaterialTheme.colorScheme.tertiary  // Погашение
                 else
-                    MaterialTheme.colorScheme.error    // Долг → красный
+                    MaterialTheme.colorScheme.error     // Взятие долга
             )
         }
     }
