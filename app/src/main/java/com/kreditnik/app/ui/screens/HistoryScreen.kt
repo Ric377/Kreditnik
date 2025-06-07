@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.viewmodel.LoanViewModel
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 enum class SortOption { DATE, AMOUNT }
 
@@ -51,7 +52,7 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                 actions = {
                     // Кнопка сортировки
                     IconButton(onClick = { expandedSort = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Сортировка")
+                        Icon(Icons.Filled.Sort, contentDescription = "Сортировка")
                     }
                     DropdownMenu(
                         expanded = expandedSort,
@@ -138,12 +139,10 @@ fun HistoryScreen(viewModel: LoanViewModel) {
             itemsIndexed(sortedOperations) { index, operation ->
                 OperationItem(
                     operation = operation,
-                    loanName = viewModel.getLoanNameById(operation.loanId),
-                    index = index
+                    loanName = viewModel.getLoanNameById(operation.loanId)
                 )
-
                 if (index != sortedOperations.lastIndex) {
-                    Divider(
+                    HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant,
                         thickness = 0.5.dp,
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -157,7 +156,7 @@ fun HistoryScreen(viewModel: LoanViewModel) {
 private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
 @Composable
-fun OperationItem(operation: Operation, loanName: String, index: Int) {
+fun OperationItem(operation: Operation, loanName: String) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -210,7 +209,7 @@ fun OperationItem(operation: Operation, loanName: String, index: Int) {
             }
 
             Text(
-                text = String.format("%+,.2f ₽", operation.amount),
+                String.format(Locale.US, "%+,.2f ₽", operation.amount),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold
                 ),
