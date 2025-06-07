@@ -20,10 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.text.font.FontWeight
-
-
-
-
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.AccountBalance
 
 @Composable
 fun HistoryScreen(viewModel: LoanViewModel) {
@@ -34,8 +32,19 @@ fun HistoryScreen(viewModel: LoanViewModel) {
     LazyColumn(
         modifier = Modifier.fillMaxSize()
     ) {
+        item {
+            Text(
+                text = "История операций",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            )
+        }
         items(operations) { operation ->
-            OperationItem(operation)
+            OperationItem(operation, viewModel.getLoanNameById(operation.loanId))
         }
     }
 }
@@ -43,7 +52,7 @@ fun HistoryScreen(viewModel: LoanViewModel) {
 private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
 @Composable
-fun OperationItem(operation: Operation) {
+fun OperationItem(operation: Operation, loanName: String) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -51,30 +60,34 @@ fun OperationItem(operation: Operation) {
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp) // ✅ исправлено
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 0.dp, vertical = 12.dp), // ✅ исправлено
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Иконка операции
-            Icon(
-                imageVector = if (operation.amount < 0)
-                    Icons.Filled.Remove else Icons.Filled.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    Icons.Filled.AccountBalance,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp)) // ✅ исправлено
 
-            // Текст
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = operation.description ?: "Без описания",
+                    text = loanName,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -87,7 +100,6 @@ fun OperationItem(operation: Operation) {
                 )
             }
 
-            // Сумма
             Text(
                 text = String.format(
                     "%+,.2f ₽", operation.amount
@@ -95,10 +107,10 @@ fun OperationItem(operation: Operation) {
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold
                 ),
-                color = if (operation.amount > 0)
-                    MaterialTheme.colorScheme.tertiary
+                color = if (operation.amount < 0)
+                    MaterialTheme.colorScheme.tertiary // Погашение → зелёный
                 else
-                    MaterialTheme.colorScheme.error
+                    MaterialTheme.colorScheme.error    // Долг → красный
             )
         }
     }

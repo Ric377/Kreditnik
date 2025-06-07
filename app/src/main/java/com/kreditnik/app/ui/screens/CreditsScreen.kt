@@ -43,16 +43,17 @@ private fun LoanRowContent(loan: Loan, currency: String) {
     ) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = .15f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
             modifier = Modifier.size(48.dp)
         ) {
             Icon(
-                Icons.Filled.AccountBalance,
+                Icons.Filled.AccountBalance,  // Пока временная иконка банк
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(12.dp)
             )
         }
+
 
         Spacer(Modifier.width(16.dp))
 

@@ -60,4 +60,9 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
             loadLoans()
         }
     }
+
+    fun getLoanNameById(loanId: Long): String {
+        return _loans.value.firstOrNull { it.id == loanId }?.name ?: "Неизвестный кредит"
+    }
+
 }
