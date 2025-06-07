@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")                 // Room
+    id("kotlin-kapt") // Room
 }
 
 android {
@@ -32,31 +32,39 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions { jvmTarget = "11" }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+    }
 
-    /* ⬇︎  указываем версию компилятора для Compose 1.8/1.9 */
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }  // совместимо с BOM-2025-05-01
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.6.10"   // ← минимальная совместимая с BOM-2025-05-01
+    }
 }
 
 kapt {
-    arguments { arg("room.schemaLocation", "$projectDir/schemas") }
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
 }
 
 dependencies {
-
     /* ───── Jetpack Compose (BOM) ───── */
-    implementation(platform("androidx.compose:compose-bom:2025.05.01"))          /* 20 мая 2025 :contentReference[oaicite:0]{index=0} */
-    implementation("androidx.compose.material3:material3")                       /* 1.3.2 через BOM – содержит SmallTopAppBar :contentReference[oaicite:1]{index=1} */
+    implementation(platform("androidx.compose:compose-bom:2025.05.01")) // Используем только свежую BOM
+
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.ui:ui")          // базовый UI-модуль
+    implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     /* ───── Навигация Compose ───── */
-    implementation("androidx.navigation:navigation-compose:2.9.0")               /* стабильный релиз 7 мая 2025  */
+    implementation("androidx.navigation:navigation-compose:2.9.0")
 
     /* ───── Lifecycle / ViewModel ───── */
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.0")
@@ -72,11 +80,11 @@ dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.activity:activity-compose:1.10.1")
 
-    /* ───── Material Components v1 (виджеты View) ───── */
+    /* ───── Material Components (виджеты на View) ───── */
     implementation("com.google.android.material:material:1.12.0")
 
-    /* настройки */
-    implementation ("androidx.datastore:datastore-preferences:1.0.0")
+    /* ───── Datastore ───── */
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     /* ───── Тесты ───── */
     testImplementation("junit:junit:4.13.2")

@@ -2,7 +2,7 @@ package com.kreditnik.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -50,7 +50,6 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                     )
                 },
                 actions = {
-                    // Кнопка сортировки
                     IconButton(onClick = { expandedSort = true }) {
                         Icon(Icons.Filled.Sort, contentDescription = "Сортировка")
                     }
@@ -74,7 +73,6 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                         )
                     }
 
-                    // Кнопка фильтра по кредиту
                     IconButton(onClick = { expandedLoanFilter = true }) {
                         Icon(Icons.Default.FilterList, contentDescription = "Фильтр по кредиту")
                     }
@@ -100,7 +98,6 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                         }
                     }
 
-                    // Кнопка смены направления сортировки
                     IconButton(onClick = { sortAscending = !sortAscending }) {
                         Icon(
                             imageVector = if (sortAscending) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
@@ -136,18 +133,12 @@ fun HistoryScreen(viewModel: LoanViewModel) {
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            itemsIndexed(sortedOperations) { index, operation ->
+            items(sortedOperations) { operation ->
                 OperationItem(
                     operation = operation,
-                    loanName = viewModel.getLoanNameById(operation.loanId)
+                    loanName = viewModel.getLoanNameById(operation.loanId),
                 )
-                if (index != sortedOperations.lastIndex) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        thickness = 0.5.dp,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }
@@ -156,21 +147,18 @@ fun HistoryScreen(viewModel: LoanViewModel) {
 private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
 @Composable
-fun OperationItem(operation: Operation, loanName: String) {
+fun OperationItem(operation: Operation, loanName: String, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        ),
-        modifier = Modifier
+        elevation = CardDefaults.cardElevation(0.dp),
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 0.dp, vertical = 4.dp)
     ) {
-
-    Row(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -221,4 +209,3 @@ fun OperationItem(operation: Operation, loanName: String) {
         }
     }
 }
-
