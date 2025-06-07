@@ -137,31 +137,33 @@ fun LoanDetailScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),   // только по бокам
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { showAddDialog.value = true },
+                    onClick = { /* Добавить долг */ },
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Добавить долг")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Добавить долг")
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))   // ⬅️ 8.dp между иконкой и текстом
+                    Text(
+                        text = "Добавить",
+                        maxLines = 1
+                    )
                 }
 
                 Button(
-                    onClick = { showPayDialog.value = true },
+                    onClick = { /* Погасить долг */ },
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary  // ❗ тоже primary
-                    )
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Погасить долг")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Погасить долг")
+                    Icon(Icons.Default.Remove, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))   // ⬅️ 8.dp между иконкой и текстом
+                    Text(
+                        text = "Погасить",
+                        maxLines = 1
+                    )
                 }
             }
         }
