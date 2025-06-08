@@ -44,4 +44,12 @@ class LoanRepository(
     suspend fun deleteOperation(operation: Operation) {
         operationDao.deleteOperation(operation)
     }
+
+    suspend fun recalculateLoanAfterOperationUpdate(operation: Operation) {
+        val loan = loanDao.getLoanById(operation.loanId) ?: return
+        val allOperations = operationDao.getOperationsForLoan(loan.id)
+        val newPrincipal = allOperations.sumOf { it.amount }
+        loanDao.updateLoan(loan.copy(principal = newPrincipal))
+    }
+
 }

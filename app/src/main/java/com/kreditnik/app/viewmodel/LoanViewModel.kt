@@ -119,10 +119,17 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     }
 
 
-    fun updateOperation(operation: Operation) = viewModelScope.launch {
-        repository.updateOperation(operation)
-        loadOperations()
+    fun updateOperation(operation: Operation) {
+        viewModelScope.launch {
+            repository.updateOperation(operation)
+            repository.recalculateLoanAfterOperationUpdate(operation)
+            loadOperations()
+            loadLoans()
+        }
     }
+
+
+
 
     fun deleteOperation(operation: Operation) = viewModelScope.launch {
         repository.deleteOperation(operation)
