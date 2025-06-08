@@ -3,6 +3,7 @@ package com.kreditnik.app.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDate
+import com.kreditnik.app.data.DayCountConvention
 
 @Entity(tableName = "loans")
 data class Loan(
@@ -22,5 +23,6 @@ data class Loan(
     val gracePeriodEndDate: LocalDate?, // Дата окончания льготного периода
 
     // Для долгов
-    val debtDueDate: LocalDate?         // Дата возврата долга
+    val debtDueDate: LocalDate?,         // Дата возврата долга
+    val dayCountConvention: DayCountConvention = DayCountConvention.SBER
 )

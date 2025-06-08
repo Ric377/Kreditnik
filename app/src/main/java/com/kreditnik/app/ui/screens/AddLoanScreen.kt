@@ -23,6 +23,7 @@ import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.data.LoanType
 import com.kreditnik.app.viewmodel.LoanViewModel
+import com.kreditnik.app.data.DayCountConvention
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
@@ -36,6 +37,8 @@ fun AddLoanScreen(
     navController: NavController,
     loan: Loan? = null
 ) {
+    var selectedConvention by remember { mutableStateOf(loan?.dayCountConvention ?: DayCountConvention.SBER) }
+
     // ==== Переменные состояния ====
     var name by remember { mutableStateOf(loan?.name ?: "") }
     var principal by remember { mutableStateOf(loan?.principal?.toString() ?: "") }
@@ -316,6 +319,47 @@ fun AddLoanScreen(
                 shape = fieldShape,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (autoCalculatePayment) {
+                val conventionLabels = mapOf(
+                    DayCountConvention.SBER   to "Сбер-стиль",
+                    DayCountConvention.RETAIL to "Альфа/ВТБ/Совком-стиль"
+                )
+                var conventionExpanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = conventionExpanded,
+                    onExpandedChange = { conventionExpanded = !conventionExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        readOnly = true,
+                        value = conventionLabels[selectedConvention]!!,
+                        onValueChange = {},
+                        label = { Text("Метод расчёта") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = conventionExpanded) },
+                        shape = fieldShape,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = OutlinedTextFieldDefaults.colors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = conventionExpanded,
+                        onDismissRequest = { conventionExpanded = false }
+                    ) {
+                        DayCountConvention.values().forEach { conv ->
+                            DropdownMenuItem(
+                                text = { Text(conventionLabels[conv]!!) },
+                                onClick = {
+                                    selectedConvention = conv
+                                    conventionExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             if (monthlyPaymentError) {
                 Text(
                     text = "Введите корректный платёж",
@@ -391,9 +435,14 @@ fun AddLoanScreen(
                                 gracePeriodDays = null,
                                 mandatoryPaymentDay = null,
                                 gracePeriodEndDate = null,
-                                debtDueDate = null
+                                debtDueDate = null,
+                                dayCountConvention = selectedConvention
                             )
-                            loanViewModel.addLoan(newLoan)
+
+                            scope.launch {
+                                loanViewModel.addLoan(newLoan)
+                                navController.popBackStack()
+                            }
                         } else {
                             val updatedLoan = loan.copy(
                                 name = name,
@@ -402,7 +451,8 @@ fun AddLoanScreen(
                                 startDate = selectedDate,
                                 monthlyPaymentDay = selectedPaymentDay,
                                 principal = loanPrincipal!!,
-                                months = loanMonths!!
+                                months = loanMonths!!,
+                                dayCountConvention = selectedConvention
                             )
                             loanViewModel.updateLoan(updatedLoan)
                         }
