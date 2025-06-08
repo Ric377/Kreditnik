@@ -13,15 +13,13 @@ import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.kreditnik.app.data.DatabaseProvider
 import com.kreditnik.app.data.LoanRepository
@@ -67,23 +65,29 @@ fun MainScreen(
     loanViewModel: LoanViewModel,
     settingsViewModel: SettingsViewModel
 ) {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    // Контроллеры навигации для каждой вкладки
+    val navControllers = remember {
+        BottomNavItem.values().associateWith { mutableStateOf<NavHostController?>(null) }
+    }
+
+    var selectedItem by rememberSaveable { mutableStateOf(BottomNavItem.Credits) }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 BottomNavItem.values().forEach { item ->
                     NavigationBarItem(
-                        selected = currentRoute == item.route,
+                        selected = selectedItem == item,
                         onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+                            val controller = navControllers[item]?.value
+                            if (selectedItem == item && controller != null) {
+                                // Если уже на экране — сброс стека до стартового экрана вкладки
+                                controller.popBackStack(
+                                    route = item.route,
+                                    inclusive = false
+                                )
+                            } else {
+                                selectedItem = item
                             }
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },
@@ -93,13 +97,19 @@ fun MainScreen(
             }
         }
     ) { innerPadding ->
+
+        // Инициализируем контроллер для выбранного таба
+        val navController = navControllers.getValue(selectedItem).value
+            ?: rememberNavController().also { navControllers.getValue(selectedItem).value = it }
+
         NavHost(
             navController = navController,
-            startDestination = BottomNavItem.Credits.route,
+            startDestination = selectedItem.route,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Главные экраны вкладок
             composable(BottomNavItem.Credits.route) {
                 CreditsScreen(
                     loanViewModel = loanViewModel,
@@ -108,7 +118,6 @@ fun MainScreen(
                 )
             }
             composable(BottomNavItem.History.route) {
-                // ВАЖНО: сюда передаем loanViewModel
                 HistoryScreen(viewModel = loanViewModel)
             }
             composable(BottomNavItem.Analytics.route) {
@@ -117,10 +126,11 @@ fun MainScreen(
             composable(BottomNavItem.Settings.route) {
                 SettingsScreen()
             }
+
+            // Навигация внутри вкладки
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
             }
-
             composable(
                 route = "editLoan/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.LongType })
@@ -131,7 +141,6 @@ fun MainScreen(
                     AddLoanScreen(loanViewModel, navController, editLoan)
                 }
             }
-
             composable(
                 route = "loanDetail/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.IntType })
@@ -149,7 +158,6 @@ fun MainScreen(
                     )
                 }
             }
-
             composable(
                 route = "paymentSchedule/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.LongType })
