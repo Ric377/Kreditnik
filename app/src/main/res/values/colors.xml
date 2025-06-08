@@ -9,6 +9,8 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="primary">#FFFFFF</color>
-    <color name="splash_background_light">#FFFFFF</color> <!-- фон для светлой темы -->
-    <color name="splash_background_dark">#000000</color>  <!-- фон для тёмной темы -->
+    <color name="splash_background_light">#FFFFFF</color>
+    <color name="splash_background_dark">#000000</color>
+    <color name="background_light_color">#FFFFFF</color>
+    <color name="background_dark_color">#121212</color> <!-- НОВЫЙ ЦВЕТ -->
 </resources>
