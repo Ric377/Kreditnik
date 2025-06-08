@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Text
@@ -54,6 +55,7 @@ fun LoanDetailScreen(
     val showPrepayDialog = remember { mutableStateOf(false) }
     val amountInput = remember { mutableStateOf("") }
     var extraInput by remember { mutableStateOf("") }
+    val showMonthlyConfirmDialog = remember { mutableStateOf(false) }
 
 
     Scaffold(
@@ -145,25 +147,36 @@ fun LoanDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (loan.type == LoanType.CREDIT) {
+                    // Внести платёж
                     Button(
-                        onClick = { loanViewModel.payMonthly(loan) },
+                        onClick = { showMonthlyConfirmDialog.value = true },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Ежемесячный платёж", maxLines = 1)
+                        Text(
+                            "Внести платёж",
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
+                    // Досрочное погашение
                     Button(
                         onClick = { showPrepayDialog.value = true },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Досрочное погашение", maxLines = 1)
+                        Text(
+                            "Погасить досрочно",
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 } else {
+                    // Для остальных типов — старые кнопки
                     Button(
                         onClick = { showAddDialog.value = true },
                         shape = RoundedCornerShape(8.dp),
@@ -183,7 +196,8 @@ fun LoanDetailScreen(
                         Text("Погасить", maxLines = 1)
                     }
                 }
-            }
+            }  // <-- Закрывающая скобка для Row
+
 
 
 
@@ -303,7 +317,7 @@ fun LoanDetailScreen(
                 OutlinedTextField(
                     value = extraInput,
                     onValueChange = { extraInput = it },
-                    label = { Text("Сумма сверх аннуитета") },
+                    label = { Text("Введите сумму") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             },
@@ -326,6 +340,33 @@ fun LoanDetailScreen(
             }
         )
     }
+
+    if (showMonthlyConfirmDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showMonthlyConfirmDialog.value = false },
+            title = { Text("Подтвердите платёж") },
+            text = {
+                Text(
+                    "Внести ежемесячный платёж:\n" +
+                            "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    loanViewModel.payMonthly(loan)
+                    showMonthlyConfirmDialog.value = false
+                }) {
+                    Text("Да")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMonthlyConfirmDialog.value = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
 
 }
 
