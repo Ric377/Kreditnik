@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.data.OperationType
+import com.kreditnik.app.data.LoanType
 import java.time.LocalDateTime
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -50,7 +51,10 @@ fun LoanDetailScreen(
     val expandedMenu = remember { mutableStateOf(false) }
     val showAddDialog = remember { mutableStateOf(false) }
     val showPayDialog = remember { mutableStateOf(false) }
+    val showPrepayDialog = remember { mutableStateOf(false) }
     val amountInput = remember { mutableStateOf("") }
+    var extraInput by remember { mutableStateOf("") }
+
 
     Scaffold(
         topBar = {
@@ -140,26 +144,48 @@ fun LoanDetailScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { showAddDialog.value = true },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Добавить", maxLines = 1)
-                }
-
-                Button(
-                    onClick = { showPayDialog.value = true },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Погасить", maxLines = 1)
+                if (loan.type == LoanType.CREDIT) {
+                    Button(
+                        onClick = { loanViewModel.payMonthly(loan) },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Ежемесячный платёж", maxLines = 1)
+                    }
+                    Button(
+                        onClick = { showPrepayDialog.value = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Досрочное погашение", maxLines = 1)
+                    }
+                } else {
+                    Button(
+                        onClick = { showAddDialog.value = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Добавить", maxLines = 1)
+                    }
+                    Button(
+                        onClick = { showPayDialog.value = true },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Погасить", maxLines = 1)
+                    }
                 }
             }
+
+
 
             Spacer(modifier = Modifier.height(8.dp)) // Немного воздуха между рядами
 
@@ -268,6 +294,39 @@ fun LoanDetailScreen(
             }
         )
     }
+
+    if (showPrepayDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showPrepayDialog.value = false },
+            title = { Text("Досрочное погашение") },
+            text = {
+                OutlinedTextField(
+                    value = extraInput,
+                    onValueChange = { extraInput = it },
+                    label = { Text("Сумма сверх аннуитета") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    extraInput.toDoubleOrNull()?.takeIf { it > 0 }?.let {
+                        loanViewModel.prepay(loan, it)
+                    }
+                    extraInput = ""
+                    showPrepayDialog.value = false
+                }) {
+                    Text("Погасить")
+                }
+            }
+            ,
+            dismissButton = {
+                TextButton(onClick = { showPrepayDialog.value = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
 }
 
 

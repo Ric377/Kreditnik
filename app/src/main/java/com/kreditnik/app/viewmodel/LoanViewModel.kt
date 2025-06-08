@@ -7,6 +7,7 @@ import com.kreditnik.app.data.LoanRepository
 import com.kreditnik.app.data.Operation
 import com.kreditnik.app.ui.screens.PaymentScheduleItem
 import com.kreditnik.app.data.DayCountConvention
+import com.kreditnik.app.data.OperationType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,6 +15,8 @@ import java.time.LocalDate
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.temporal.ChronoUnit
+import java.time.LocalDateTime
+
 
 
 class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
@@ -80,6 +83,38 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
         updateLoanPrincipal(operation.loanId, operation.amount)
         loadOperations()
     }
+
+    /**
+     * «Ежемесячный платёж» по аннуитету.
+     */
+    fun payMonthly(loan: Loan) = viewModelScope.launch {
+        val payment = -monthlyPayment(loan.principal, loan.interestRate, loan.months)
+        addOperation(
+            Operation(
+                loanId      = loan.id,
+                amount      = payment,
+                date        = LocalDateTime.now(),
+                type        = OperationType.PAYMENT,
+                description = "Ежемесячный платёж"
+            )
+        )
+    }
+
+    /**
+     * Досрочное погашение сверх аннуитета.
+     */
+    fun prepay(loan: Loan, extra: Double) = viewModelScope.launch {
+        addOperation(
+            Operation(
+                loanId      = loan.id,
+                amount      = -extra,
+                date        = LocalDateTime.now(),
+                type        = OperationType.PAYMENT,
+                description = "Досрочное погашение"
+            )
+        )
+    }
+
 
     fun updateOperation(operation: Operation) = viewModelScope.launch {
         repository.updateOperation(operation)
