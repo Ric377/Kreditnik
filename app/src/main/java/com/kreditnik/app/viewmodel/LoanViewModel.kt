@@ -40,9 +40,10 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
     /* ---------- загрузка ---------- */
 
-    private fun loadLoans() = viewModelScope.launch {
+    fun loadLoans() = viewModelScope.launch {
         _loans.value = repository.getAllLoans()
     }
+
 
     fun loadOperations() = viewModelScope.launch {
         _operations.value = repository.getAllOperations()

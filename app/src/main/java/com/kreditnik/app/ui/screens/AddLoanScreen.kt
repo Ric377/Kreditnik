@@ -422,41 +422,41 @@ fun AddLoanScreen(
                     val hasError = nameError || principalError || interestRateError || monthsError || monthlyPaymentError
 
                     if (!hasError) {
-                        if (loan == null) {
-                            val newLoan = Loan(
-                                name = name,
-                                type = selectedType,
-                                logo = "",
-                                interestRate = loanInterestRate!!,
-                                startDate = selectedDate,
-                                monthlyPaymentDay = selectedPaymentDay,
-                                principal = loanPrincipal!!,
-                                months = loanMonths!!,
-                                gracePeriodDays = null,
-                                mandatoryPaymentDay = null,
-                                gracePeriodEndDate = null,
-                                debtDueDate = null,
-                                dayCountConvention = selectedConvention
-                            )
-
-                            scope.launch {
+                        scope.launch {
+                            if (loan == null) {
+                                val newLoan = Loan(
+                                    name = name,
+                                    type = selectedType,
+                                    logo = "",
+                                    interestRate = loanInterestRate!!,
+                                    startDate = selectedDate,
+                                    monthlyPaymentDay = selectedPaymentDay,
+                                    principal = loanPrincipal!!,
+                                    months = loanMonths!!,
+                                    gracePeriodDays = null,
+                                    mandatoryPaymentDay = null,
+                                    gracePeriodEndDate = null,
+                                    debtDueDate = null,
+                                    dayCountConvention = selectedConvention
+                                )
                                 loanViewModel.addLoan(newLoan)
-                                navController.popBackStack()
+                                loanViewModel.loadLoans() // <----- ДОБАВИЛ ЭТО
+                            } else {
+                                val updatedLoan = loan.copy(
+                                    name = name,
+                                    type = selectedType,
+                                    interestRate = loanInterestRate!!,
+                                    startDate = selectedDate,
+                                    monthlyPaymentDay = selectedPaymentDay,
+                                    principal = loanPrincipal!!,
+                                    months = loanMonths!!,
+                                    dayCountConvention = selectedConvention
+                                )
+                                loanViewModel.updateLoan(updatedLoan)
+                                loanViewModel.loadLoans() // <----- ДОБАВИЛ ЭТО
                             }
-                        } else {
-                            val updatedLoan = loan.copy(
-                                name = name,
-                                type = selectedType,
-                                interestRate = loanInterestRate!!,
-                                startDate = selectedDate,
-                                monthlyPaymentDay = selectedPaymentDay,
-                                principal = loanPrincipal!!,
-                                months = loanMonths!!,
-                                dayCountConvention = selectedConvention
-                            )
-                            loanViewModel.updateLoan(updatedLoan)
+                            navController.popBackStack()
                         }
-                        navController.popBackStack()
                     }
                 },
                 modifier = Modifier
