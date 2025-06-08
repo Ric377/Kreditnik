@@ -1,8 +1,15 @@
 package com.kreditnik.app
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -32,7 +42,34 @@ import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            sendNotification()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        createNotificationChannel()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                sendNotification()
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            sendNotification()
+        }
+
         val splashScreen = installSplashScreen()
         splashScreen.setOnExitAnimationListener { provider ->
             provider.view.animate()
@@ -41,10 +78,7 @@ class MainActivity : ComponentActivity() {
                 .withEndAction { provider.remove() }
         }
 
-        super.onCreate(savedInstanceState)
-
         setContent {
-            // ВНУТРИ setContent
             val systemTheme = isSystemInDarkTheme()
             var useDarkTheme by rememberSaveable { mutableStateOf(systemTheme) }
 
@@ -60,7 +94,8 @@ class MainActivity : ComponentActivity() {
                     factory = LoanViewModelFactory(
                         LoanRepository(
                             loanDao = DatabaseProvider.getDatabase(applicationContext).loanDao(),
-                            operationDao = DatabaseProvider.getDatabase(applicationContext).operationDao()
+                            operationDao = DatabaseProvider.getDatabase(applicationContext)
+                                .operationDao()
                         )
                     )
                 )
@@ -69,12 +104,45 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "loan_channel",
+                "Кредиты",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Напоминания о платежах и советах"
+            }
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun sendNotification() {
+        // Проверка разрешения перед отправкой уведомления
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Разрешение не дано, просто выходим, не крашимся
+            return
+        }
+
+        val builder = NotificationCompat.Builder(this, "loan_channel")
+            .setSmallIcon(R.drawable.ic_notification) // замени на свою иконку
+            .setContentTitle("Напоминание о платеже")
+            .setContentText("Завтра платёж по кредиту на 8000 ₽.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(1001, builder.build())
+        }
+    }
 }
 
-// Остальной код MainScreen без изменений
-
-
-enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
+    enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     Credits("credits", Icons.AutoMirrored.Filled.List, "Кредиты"),
     History("history", Icons.Filled.History, "История"),
     Analytics("analytics", Icons.Filled.PieChart, "Аналитика"),
