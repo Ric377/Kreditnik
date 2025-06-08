@@ -1,9 +1,12 @@
 <resources>
+    <style name="Theme.Kreditnik" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/background_dark_color</item>
+    </style>
 
     <style name="Theme.Kreditnik.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background_dark</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Kreditnik</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background_dark</item>
     </style>
-
 </resources>

@@ -1,5 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="splash_icon_background_light">@color/primary</color>
+    <color name="splash_icon_background_dark">@color/black</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -8,6 +9,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="primary">#FFFFFF</color>
-    <color name="splash_background_light">#FFFFFF</color> <!-- светлый фон -->
-    <color name="splash_background_dark">#000000</color>  <!-- тёмный фон -->
+    <color name="splash_background_light">#FFFFFF</color> <!-- фон для светлой темы -->
+    <color name="splash_background_dark">#000000</color>  <!-- фон для тёмной темы -->
 </resources>

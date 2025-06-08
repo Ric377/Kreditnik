@@ -55,8 +55,16 @@ class MainActivity : ComponentActivity() {
             else AppCompatDelegate.MODE_NIGHT_NO
         )
 
+
         // Установка SplashScreen
         val splashScreen = installSplashScreen()
+        // Добавленная вами exit animation - это хорошо!
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.view.animate()
+                .alpha(0f)
+                .setDuration(300L)
+                .withEndAction { provider.remove() }
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -64,24 +72,32 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = viewModel()
             val darkThemeState = settingsViewModel.darkModeEnabled.collectAsState(initial = null)
 
-            // Контролируем показывать SplashScreen или нет
-            val darkTheme = darkThemeState.value
-            LaunchedEffect(darkTheme) {
-                // Как только darkTheme загружен — отпускаем SplashScreen
-                splashScreen.setKeepOnScreenCondition { darkTheme == null }
+            var uiReady by remember { mutableStateOf(false) }
+
+            // ЭТОТ LaunchedEffect БУДЕТ ЖДАТЬ, ПОКА darkTheme ЗАГРУЗИТСЯ
+            LaunchedEffect(darkThemeState.value) {
+                if (darkThemeState.value != null) {
+                    uiReady = true
+                }
             }
 
-            // Теперь если darkTheme не загружен — просто белый экран (Splash)
-            if (darkTheme != null) {
-                KreditnikTheme(darkTheme = darkTheme) {
+            // Splash Screen будет скрыт, только когда uiReady станет true
+            LaunchedEffect(uiReady) {
+                splashScreen.setKeepOnScreenCondition { !uiReady }
+            }
+
+            // Теперь если darkTheme не загружен, будет оставаться Splash.
+            // Как только darkTheme загружен (и uiReady стал true), Splash скроется и отобразится MainScreen.
+            if (darkThemeState.value != null) {
+                KreditnikTheme(darkTheme = darkThemeState.value!!) {
                     MainScreen(loanViewModel, settingsViewModel)
                 }
             }
+            // else блок не нужен, т.к. splashScreen.setKeepOnScreenCondition { !uiReady }
+            // будет удерживать сплэш, пока darkThemeState.value не станет != null.
         }
     }
 }
-
-
 
 
 enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
