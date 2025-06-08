@@ -8,4 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="primary">#FFFFFF</color>
+    <color name="splash_background_light">#FFFFFF</color> <!-- светлый фон -->
+    <color name="splash_background_dark">#000000</color>  <!-- тёмный фон -->
 </resources>

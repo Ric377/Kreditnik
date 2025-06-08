@@ -1,13 +1,14 @@
 <resources>
 
+    <!-- Основная тема -->
     <style name="Theme.Kreditnik" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Твоя основная тема -->
+        <!-- твои цвета и настройки -->
     </style>
 
-    <!-- Создаем свой SplashScreen на базе Theme.SplashScreen -->
+    <!-- Тема сплэш-экрана -->
     <style name="Theme.Kreditnik.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/primary</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenBackground">@color/splash_background_light</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Kreditnik</item>
     </style>
 
