@@ -4,10 +4,11 @@
         <!-- Твоя основная тема -->
     </style>
 
+    <!-- Создаем свой SplashScreen на базе Theme.SplashScreen -->
     <style name="Theme.Kreditnik.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#FFFFFF</item> <!-- белый фон -->
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item> <!-- иконка -->
-        <item name="postSplashScreenTheme">@style/Theme.Kreditnik</item> <!-- после сплеша -->
+        <item name="windowSplashScreenBackground">@color/primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Kreditnik</item>
     </style>
 
 </resources>

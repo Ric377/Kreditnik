@@ -55,6 +55,8 @@ dependencies {
     /* ───── Jetpack Compose (BOM) ───── */
     implementation(platform("androidx.compose:compose-bom:2025.05.01")) // Используем только свежую BOM
 
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
