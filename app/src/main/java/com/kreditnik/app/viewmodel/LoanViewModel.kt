@@ -89,7 +89,7 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
      */
     fun payMonthly(loan: Loan) = viewModelScope.launch {
         val payment = -monthlyPayment(loan.principal, loan.interestRate, loan.months)
-        addOperation(
+        repository.insertOperation(
             Operation(
                 loanId      = loan.id,
                 amount      = payment,
@@ -98,13 +98,15 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
                 description = "Ежемесячный платёж"
             )
         )
+        updateLoanPrincipal(loan.id, payment)
+        loadOperations()
     }
 
     /**
      * Досрочное погашение сверх аннуитета.
      */
     fun prepay(loan: Loan, extra: Double) = viewModelScope.launch {
-        addOperation(
+        repository.insertOperation(
             Operation(
                 loanId      = loan.id,
                 amount      = -extra,
@@ -113,6 +115,7 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
                 description = "Досрочное погашение"
             )
         )
+        loadOperations()
     }
 
 

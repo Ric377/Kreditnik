@@ -13,10 +13,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kreditnik.app.viewmodel.LoanViewModel
+import com.kreditnik.app.data.OperationType
+import com.kreditnik.app.data.Operation
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+
+// модель одного пункта графика платежей
+data class PaymentScheduleItem(
+    val monthNumber: Int,
+    val paymentDate: LocalDate,
+    val totalPayment: Double,
+    val principalPart: Double,
+    val interestPart: Double,
+    val remainingPrincipal: Double,
+    val isPaid: Boolean = false
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +42,24 @@ fun PaymentScheduleScreen(
 ) {
     val loans by loanViewModel.loans.collectAsState()
     val loan = loans.firstOrNull { it.id == loanId } ?: return
-    val schedule = loanViewModel.calculatePaymentSchedule(loan)
+    val operations by loanViewModel.operations.collectAsState()
+    val baseSchedule = loanViewModel.calculatePaymentSchedule(loan)
+// собираем даты платежей, которые уже есть в списке операций
+    val paidDates = operations
+        .filter { it.loanId == loanId && it.type == OperationType.PAYMENT && it.description == "Ежемесячный платёж" }
+        .map    { it.date.toLocalDate() }
+        .toSet()
+
+// отмечаем в расписании, какие месяцы уже оплачены
+    val monthlyPaidCount = operations
+        .filter { it.loanId == loanId && it.type == OperationType.PAYMENT && it.description == "Ежемесячный платёж" }
+        .size
+
+    val schedule = baseSchedule.map { item ->
+        item.copy(isPaid = item.monthNumber <= monthlyPaidCount)
+    }
+
+
 
     Scaffold(
         topBar = {
@@ -102,10 +135,19 @@ fun PaymentItem(item: PaymentScheduleItem) {
                 }
                 // Платеж + остаток
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "${item.totalPayment.formatMoney()} ₽",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                    if (item.isPaid) {
+                        Text(
+                            text = "Погашено",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    } else {
+                        Text(
+                            text = "${item.totalPayment.formatMoney()} ₽",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Остаток: ${item.remainingPrincipal.formatMoney()} ₽",
