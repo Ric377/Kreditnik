@@ -1,5 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Kreditnik" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Kreditnik" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Твоя основная тема -->
+    </style>
+
+    <style name="Theme.Kreditnik.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FFFFFF</item> <!-- белый фон -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item> <!-- иконка -->
+        <item name="postSplashScreenTheme">@style/Theme.Kreditnik</item> <!-- после сплеша -->
+    </style>
+
 </resources>
