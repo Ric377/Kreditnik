@@ -29,6 +29,11 @@ import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
+import androidx.appcompat.app.AppCompatDelegate
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import com.kreditnik.app.data.SettingsDataStore
+
 
 class MainActivity : ComponentActivity() {
     private val loanViewModel: LoanViewModel by viewModels {
@@ -42,20 +47,41 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // ==== ДОБАВИТЬ installSplashScreen() ПЕРВЫМ ====
-        installSplashScreen()
+        val isDark = runBlocking {
+            SettingsDataStore(applicationContext).darkModeEnabledFlow.first()
+        }
+        AppCompatDelegate.setDefaultNightMode(
+            if (isDark) AppCompatDelegate.MODE_NIGHT_YES
+            else AppCompatDelegate.MODE_NIGHT_NO
+        )
+
+        // Установка SplashScreen
+        val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel()
-            val darkTheme by settingsViewModel.darkModeEnabled.collectAsState()
+            val darkThemeState = settingsViewModel.darkModeEnabled.collectAsState(initial = null)
 
-            KreditnikTheme(darkTheme = darkTheme) {
-                MainScreen(loanViewModel, settingsViewModel)
+            // Контролируем показывать SplashScreen или нет
+            val darkTheme = darkThemeState.value
+            LaunchedEffect(darkTheme) {
+                // Как только darkTheme загружен — отпускаем SplashScreen
+                splashScreen.setKeepOnScreenCondition { darkTheme == null }
+            }
+
+            // Теперь если darkTheme не загружен — просто белый экран (Splash)
+            if (darkTheme != null) {
+                KreditnikTheme(darkTheme = darkTheme) {
+                    MainScreen(loanViewModel, settingsViewModel)
+                }
             }
         }
     }
 }
+
+
 
 
 enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
