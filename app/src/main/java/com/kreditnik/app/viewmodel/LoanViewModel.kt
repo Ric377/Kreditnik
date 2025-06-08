@@ -93,73 +93,87 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     }
 
     /* ---------- график платежей ---------- */
-
     fun calculatePaymentSchedule(loan: Loan): List<PaymentScheduleItem> {
         val schedule = mutableListOf<PaymentScheduleItem>()
         var remaining = BigDecimal(loan.principal.toString()).setScale(2, RoundingMode.HALF_EVEN)
         var date = loan.startDate
 
+        // Функция для вычисления даты следующего платежа
         val paymentDay = if (loan.monthlyPaymentDay == 0) 28 else loan.monthlyPaymentDay
         fun nextPaymentDate(d: LocalDate) =
             d.plusMonths(1).withDayOfMonth(minOf(paymentDay, d.plusMonths(1).lengthOfMonth()))
 
-        // Ежемесячный аннуитетный платёж (уже округлён)
+        // Фиксированный аннуитетный платёж, уже округлён до копеек
         val rawPay = monthlyPayment(loan.principal, loan.interestRate, loan.months)
         val monthlyPay = BigDecimal(rawPay.toString()).setScale(2, RoundingMode.HALF_EVEN)
 
         repeat(loan.months) { i ->
             val nextDate = nextPaymentDate(date)
-            val daysBetween = if (loan.dayCountConvention == DayCountConvention.RETAIL)
-                30
-            else
-                ChronoUnit.DAYS.between(date, nextDate).toInt()
 
-            val daysInYear = if (loan.dayCountConvention == DayCountConvention.RETAIL)
-                360
-            else
-                if (date.isLeapYear) 366 else 365
+            // считаем дни в периоде и базу "дней в году" в зависимости от конвенции
+            val daysBetween = if (loan.dayCountConvention == DayCountConvention.RETAIL) 30
+            else ChronoUnit.DAYS.between(date, nextDate).toInt()
+            val daysInYear  = if (loan.dayCountConvention == DayCountConvention.RETAIL) 360
+            else if (date.isLeapYear) 366 else 365
 
-
-
-            // 1) годовая ставка в виде BigDecimal / 100
+            // годовая ставка как BigDecimal
             val annualRate = BigDecimal(loan.interestRate.toString())
                 .divide(BigDecimal("100"), 10, RoundingMode.HALF_EVEN)
 
-            // 2) проценты за период (по дням)
+            // проценты за период
             val interest = remaining
                 .multiply(annualRate)
                 .multiply(BigDecimal(daysBetween.toString()))
                 .divide(BigDecimal(daysInYear.toString()), 10, RoundingMode.HALF_EVEN)
             val interestRounded = interest.setScale(2, RoundingMode.HALF_EVEN)
 
-            // Признак последнего месяца
-            val isLast = i == loan.months - 1
+            if (loan.dayCountConvention == DayCountConvention.RETAIL) {
+                // === 30/360: фиксированный платёж каждый месяц ===
+                val principalPart = monthlyPay.subtract(interestRounded)
+                val totalPay     = monthlyPay
+                val rawNext      = remaining.subtract(principalPart)
+                val nextRem      = if (i == loan.months - 1) BigDecimal.ZERO
+                else rawNext.setScale(2, RoundingMode.HALF_EVEN)
 
-            // 3) основная часть = monthlyPay – проценты (или весь остаток в последний месяц)
-            val principalPart = if (isLast) remaining else monthlyPay.subtract(interestRounded)
+                schedule += PaymentScheduleItem(
+                    monthNumber        = i + 1,
+                    paymentDate        = nextDate,
+                    totalPayment       = totalPay.toDouble(),
+                    principalPart      = principalPart.toDouble(),
+                    interestPart       = interestRounded.toDouble(),
+                    remainingPrincipal = nextRem.toDouble()
+                )
+                if (i == loan.months - 1) return schedule
 
-            // 4) итоговый платёж
-            val totalPay = if (isLast) principalPart.add(interestRounded) else monthlyPay
+                remaining = nextRem
+                date = nextDate
 
-            // 5) новый остаток
-            val nextRemaining = if (isLast) BigDecimal.ZERO
-            else remaining.subtract(principalPart).setScale(2, RoundingMode.HALF_EVEN)
+            } else {
+                // === Actual/Actual: последний платёж "добивка" по остатку ===
+                val isLast        = i == loan.months - 1
+                val principalPart = if (isLast) remaining else monthlyPay.subtract(interestRounded)
+                val totalPay      = if (isLast) principalPart.add(interestRounded) else monthlyPay
+                val nextRem       = if (isLast) BigDecimal.ZERO
+                else remaining.subtract(principalPart).setScale(2, RoundingMode.HALF_EVEN)
 
-            schedule += PaymentScheduleItem(
-                monthNumber = i + 1,
-                paymentDate = nextDate,
-                totalPayment = totalPay.toDouble(),
-                principalPart = principalPart.toDouble(),
-                interestPart = interestRounded.toDouble(),
-                remainingPrincipal = nextRemaining.toDouble()
-            )
+                schedule += PaymentScheduleItem(
+                    monthNumber        = i + 1,
+                    paymentDate        = nextDate,
+                    totalPayment       = totalPay.toDouble(),
+                    principalPart      = principalPart.toDouble(),
+                    interestPart       = interestRounded.toDouble(),
+                    remainingPrincipal = nextRem.toDouble()
+                )
+                if (isLast) return schedule
 
-            if (isLast) return schedule
-            remaining = nextRemaining
-            date = nextDate
+                remaining = nextRem
+                date = nextDate
+            }
         }
+
         return schedule
     }
+
 
 
 

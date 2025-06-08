@@ -321,8 +321,8 @@ fun AddLoanScreen(
             )
             if (autoCalculatePayment) {
                 val conventionLabels = mapOf(
-                    DayCountConvention.SBER   to "Сбер-стиль",
-                    DayCountConvention.RETAIL to "Альфа/ВТБ/Совком-стиль"
+                    DayCountConvention.RETAIL to "Стандартный",
+                    DayCountConvention.SBER   to "Ежедневный (Сбербанк)"
                 )
                 var conventionExpanded by remember { mutableStateOf(false) }
 
