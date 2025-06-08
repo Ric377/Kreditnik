@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -29,36 +30,10 @@ import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
-import androidx.appcompat.app.AppCompatDelegate
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.first
-import com.kreditnik.app.data.SettingsDataStore
-
 
 class MainActivity : ComponentActivity() {
-    private val loanViewModel: LoanViewModel by viewModels {
-        val database = DatabaseProvider.getDatabase(applicationContext)
-        LoanViewModelFactory(
-            LoanRepository(
-                loanDao = database.loanDao(),
-                operationDao = database.operationDao()
-            )
-        )
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        val isDark = runBlocking {
-            SettingsDataStore(applicationContext).darkModeEnabledFlow.first()
-        }
-        AppCompatDelegate.setDefaultNightMode(
-            if (isDark) AppCompatDelegate.MODE_NIGHT_YES
-            else AppCompatDelegate.MODE_NIGHT_NO
-        )
-
-
-        // Установка SplashScreen
         val splashScreen = installSplashScreen()
-        // Добавленная вами exit animation - это хорошо!
         splashScreen.setOnExitAnimationListener { provider ->
             provider.view.animate()
                 .alpha(0f)
@@ -69,35 +44,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            // ВНУТРИ setContent
+            val systemTheme = isSystemInDarkTheme()
+            var useDarkTheme by rememberSaveable { mutableStateOf(systemTheme) }
+
             val settingsViewModel: SettingsViewModel = viewModel()
-            val darkThemeState = settingsViewModel.darkModeEnabled.collectAsState(initial = null)
+            val darkThemeState by settingsViewModel.darkModeEnabled.collectAsState(initial = null)
 
-            var uiReady by remember { mutableStateOf(false) }
-
-            // ЭТОТ LaunchedEffect БУДЕТ ЖДАТЬ, ПОКА darkTheme ЗАГРУЗИТСЯ
-            LaunchedEffect(darkThemeState.value) {
-                if (darkThemeState.value != null) {
-                    uiReady = true
-                }
+            LaunchedEffect(darkThemeState) {
+                darkThemeState?.let { useDarkTheme = it }
             }
 
-            // Splash Screen будет скрыт, только когда uiReady станет true
-            LaunchedEffect(uiReady) {
-                splashScreen.setKeepOnScreenCondition { !uiReady }
-            }
+            KreditnikTheme(darkTheme = useDarkTheme) {
+                val loanViewModel: LoanViewModel = viewModel(
+                    factory = LoanViewModelFactory(
+                        LoanRepository(
+                            loanDao = DatabaseProvider.getDatabase(applicationContext).loanDao(),
+                            operationDao = DatabaseProvider.getDatabase(applicationContext).operationDao()
+                        )
+                    )
+                )
 
-            // Теперь если darkTheme не загружен, будет оставаться Splash.
-            // Как только darkTheme загружен (и uiReady стал true), Splash скроется и отобразится MainScreen.
-            if (darkThemeState.value != null) {
-                KreditnikTheme(darkTheme = darkThemeState.value!!) {
-                    MainScreen(loanViewModel, settingsViewModel)
-                }
+                MainScreen(loanViewModel, settingsViewModel)
             }
-            // else блок не нужен, т.к. splashScreen.setKeepOnScreenCondition { !uiReady }
-            // будет удерживать сплэш, пока darkThemeState.value не станет != null.
         }
     }
 }
+
+// Остальной код MainScreen без изменений
 
 
 enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
@@ -112,7 +86,6 @@ fun MainScreen(
     loanViewModel: LoanViewModel,
     settingsViewModel: SettingsViewModel
 ) {
-    // Контроллеры навигации для каждой вкладки
     val navControllers = remember {
         BottomNavItem.values().associateWith { mutableStateOf<NavHostController?>(null) }
     }
@@ -128,11 +101,7 @@ fun MainScreen(
                         onClick = {
                             val controller = navControllers[item]?.value
                             if (selectedItem == item && controller != null) {
-                                // Если уже на экране — сброс стека до стартового экрана вкладки
-                                controller.popBackStack(
-                                    route = item.route,
-                                    inclusive = false
-                                )
+                                controller.popBackStack(route = item.route, inclusive = false)
                             } else {
                                 selectedItem = item
                             }
@@ -144,8 +113,6 @@ fun MainScreen(
             }
         }
     ) { innerPadding ->
-
-        // Инициализируем контроллер для выбранного таба
         val navController = navControllers.getValue(selectedItem).value
             ?: rememberNavController().also { navControllers.getValue(selectedItem).value = it }
 
@@ -156,7 +123,6 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Главные экраны вкладок
             composable(BottomNavItem.Credits.route) {
                 CreditsScreen(
                     loanViewModel = loanViewModel,
@@ -173,8 +139,6 @@ fun MainScreen(
             composable(BottomNavItem.Settings.route) {
                 SettingsScreen()
             }
-
-            // Навигация внутри вкладки
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
             }
@@ -195,7 +159,6 @@ fun MainScreen(
                 val loanId = backStackEntry.arguments?.getInt("loanId") ?: return@composable
                 val loan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId.toLong() }
                 val detailSettingsViewModel: SettingsViewModel = viewModel()
-
                 if (loan != null) {
                     LoanDetailScreen(
                         loan = loan,
