@@ -162,7 +162,7 @@ fun LoanDetailScreen(
             }
 
 // 🎯 А вот кнопку графика вынести ВНЕ Row:
-            Spacer(modifier = Modifier.height(16.dp)) // Немного воздуха между рядами
+            Spacer(modifier = Modifier.height(8.dp)) // Немного воздуха между рядами
 
             Button(
                 onClick = {
@@ -173,7 +173,7 @@ fun LoanDetailScreen(
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("📊 График платежей")
+                Text("График платежей")
             }
         }
     }
