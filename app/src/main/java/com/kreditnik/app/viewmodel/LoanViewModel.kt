@@ -88,19 +88,63 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     /**
      * «Ежемесячный платёж» по аннуитету.
      */
+    /**
+     * «Ежемесячный платёж» по аннуитету.
+     * Эта версия функции корректно разделяет платёж на проценты и основное тело долга.
+     * Она обновляет остаток кредита (`principal`) только на сумму погашения основного долга,
+     * что соответствует стандартной банковской логике.
+     */
     fun payMonthly(loan: Loan) = viewModelScope.launch {
-        val payment = -monthlyPayment(loan.principal, loan.interestRate, loan.months)
+        // 1. Определяем, какой по счёту этот платёж, чтобы узнать оставшийся срок.
+        val monthlyPaymentsMade = _operations.value.count {
+            it.loanId == loan.id && it.type == OperationType.PAYMENT && it.description == "Ежемесячный платёж"
+        }
+
+        // Если все платежи уже сделаны, выходим.
+        if (monthlyPaymentsMade >= loan.months) {
+            return@launch
+        }
+
+        val remainingMonths = loan.months - monthlyPaymentsMade
+        if (remainingMonths <= 0) return@launch
+
+        // 2. Рассчитываем полный ежемесячный платёж.
+        // Так как у нас нет исходной суммы кредита, мы рассчитываем платёж на основе
+        // оставшегося срока и текущего остатка. Это компромисс из-за текущей модели данных.
+        val totalMonthlyPayment = monthlyPayment(loan.principal, loan.interestRate, remainingMonths)
+
+        // 3. Рассчитываем проценты за текущий период.
+        // Формула приближена к стандартной банковской практике.
+        val monthlyRate = loan.interestRate / 100 / 12
+        val interestPart = loan.principal * monthlyRate
+
+        // 4. Рассчитываем, какая часть платежа идёт на погашение основного долга.
+        val principalPart = totalMonthlyPayment - interestPart
+
+        // 5. Корректируем суммы для последнего платежа, чтобы долг закрылся в ноль.
+        val finalPrincipalPart = if (remainingMonths == 1) loan.principal else principalPart.coerceAtLeast(0.0)
+        val finalTotalPayment = if (remainingMonths == 1) loan.principal + interestPart else totalMonthlyPayment
+
+        // 6. Создаём операцию в истории на *полную* сумму списания.
         repository.insertOperation(
             Operation(
                 loanId      = loan.id,
-                amount      = payment,
+                amount      = -finalTotalPayment, // Операция на всю сумму списания
                 date        = LocalDateTime.now(),
                 type        = OperationType.PAYMENT,
                 description = "Ежемесячный платёж"
             )
         )
-        updateLoanPrincipal(loan.id, payment)
+
+        // 7. Обновляем основной долг, вычитая ТОЛЬКО часть, идущую на его погашение.
+        // Это ключевое исправление.
+        val currentLoan = repository.getLoanById(loan.id) ?: return@launch
+        val newPrincipal = (currentLoan.principal - finalPrincipalPart).coerceAtLeast(0.0)
+        repository.updateLoan(currentLoan.copy(principal = newPrincipal))
+
+        // 8. Обновляем состояние, чтобы UI отразил изменения.
         loadOperations()
+        loadLoans()
     }
 
     /**
