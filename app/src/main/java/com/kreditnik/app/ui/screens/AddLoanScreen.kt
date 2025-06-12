@@ -424,6 +424,7 @@ fun AddLoanScreen(
                     if (!hasError) {
                         scope.launch {
                             if (loan == null) {
+                                // --- ИЗМЕНЕНИЕ ЗДЕСЬ (создание нового кредита) ---
                                 val newLoan = Loan(
                                     name = name,
                                     type = selectedType,
@@ -431,7 +432,9 @@ fun AddLoanScreen(
                                     interestRate = loanInterestRate!!,
                                     startDate = selectedDate,
                                     monthlyPaymentDay = selectedPaymentDay,
-                                    principal = loanPrincipal!!,
+                                    // При создании нового кредита, начальная и текущая сумма равны
+                                    initialPrincipal = loanPrincipal!!,
+                                    principal = loanPrincipal,
                                     months = loanMonths!!,
                                     gracePeriodDays = null,
                                     mandatoryPaymentDay = null,
@@ -440,8 +443,8 @@ fun AddLoanScreen(
                                     dayCountConvention = selectedConvention
                                 )
                                 loanViewModel.addLoan(newLoan)
-                                loanViewModel.loadLoans() // <----- ДОБАВИЛ ЭТО
                             } else {
+                                // --- ИЗМЕНЕНИЕ ЗДЕСЬ (обновление существующего кредита) ---
                                 val updatedLoan = loan.copy(
                                     name = name,
                                     type = selectedType,
@@ -450,10 +453,12 @@ fun AddLoanScreen(
                                     monthlyPaymentDay = selectedPaymentDay,
                                     principal = loanPrincipal!!,
                                     months = loanMonths!!,
-                                    dayCountConvention = selectedConvention
+                                    dayCountConvention = selectedConvention,
+                                    // Если у кредита уже есть initialPrincipal, сохраняем его.
+                                    // Если нет (это старый кредит), устанавливаем его в первый раз.
+                                    initialPrincipal = if (loan.initialPrincipal > 0.0) loan.initialPrincipal else loanPrincipal
                                 )
                                 loanViewModel.updateLoan(updatedLoan)
-                                loanViewModel.loadLoans() // <----- ДОБАВИЛ ЭТО
                             }
                             navController.popBackStack()
                         }

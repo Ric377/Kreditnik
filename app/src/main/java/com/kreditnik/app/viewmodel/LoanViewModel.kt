@@ -87,62 +87,44 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
     /**
      * «Ежемесячный платёж» по аннуитету.
-     */
-    /**
-     * «Ежемесячный платёж» по аннуитету.
-     * Эта версия функции корректно разделяет платёж на проценты и основное тело долга.
-     * Она обновляет остаток кредита (`principal`) только на сумму погашения основного долга,
-     * что соответствует стандартной банковской логике.
+     * Логика полностью переработана для работы со статичным графиком платежей.
      */
     fun payMonthly(loan: Loan) = viewModelScope.launch {
-        // 1. Определяем, какой по счёту этот платёж, чтобы узнать оставшийся срок.
+        // 1. Получаем статичный, полный график платежей.
+        val schedule = calculatePaymentSchedule(loan)
+
+        // 2. Выясняем, сколько платежей уже было сделано.
         val monthlyPaymentsMade = _operations.value.count {
             it.loanId == loan.id && it.type == OperationType.PAYMENT && it.description == "Ежемесячный платёж"
         }
 
-        // Если все платежи уже сделаны, выходим.
-        if (monthlyPaymentsMade >= loan.months) {
+        // 3. Если все платежи сделаны, выходим.
+        if (monthlyPaymentsMade >= schedule.size) {
             return@launch
         }
 
-        val remainingMonths = loan.months - monthlyPaymentsMade
-        if (remainingMonths <= 0) return@launch
+        // 4. Получаем детали для СЛЕДУЮЩЕГО платежа из статичного графика.
+        val nextPaymentItem = schedule[monthlyPaymentsMade]
+        val totalPayment = nextPaymentItem.totalPayment
+        val principalPart = nextPaymentItem.principalPart
 
-        // 2. Рассчитываем полный ежемесячный платёж.
-        // Так как у нас нет исходной суммы кредита, мы рассчитываем платёж на основе
-        // оставшегося срока и текущего остатка. Это компромисс из-за текущей модели данных.
-        val totalMonthlyPayment = monthlyPayment(loan.principal, loan.interestRate, remainingMonths)
-
-        // 3. Рассчитываем проценты за текущий период.
-        // Формула приближена к стандартной банковской практике.
-        val monthlyRate = loan.interestRate / 100 / 12
-        val interestPart = loan.principal * monthlyRate
-
-        // 4. Рассчитываем, какая часть платежа идёт на погашение основного долга.
-        val principalPart = totalMonthlyPayment - interestPart
-
-        // 5. Корректируем суммы для последнего платежа, чтобы долг закрылся в ноль.
-        val finalPrincipalPart = if (remainingMonths == 1) loan.principal else principalPart.coerceAtLeast(0.0)
-        val finalTotalPayment = if (remainingMonths == 1) loan.principal + interestPart else totalMonthlyPayment
-
-        // 6. Создаём операцию в истории на *полную* сумму списания.
+        // 5. Создаём операцию в истории на полную сумму платежа.
         repository.insertOperation(
             Operation(
                 loanId      = loan.id,
-                amount      = -finalTotalPayment, // Операция на всю сумму списания
+                amount      = -totalPayment, // Операция на всю сумму списания
                 date        = LocalDateTime.now(),
                 type        = OperationType.PAYMENT,
                 description = "Ежемесячный платёж"
             )
         )
 
-        // 7. Обновляем основной долг, вычитая ТОЛЬКО часть, идущую на его погашение.
-        // Это ключевое исправление.
+        // 6. Обновляем текущий остаток долга, вычитая ТОЛЬКО часть основного долга.
         val currentLoan = repository.getLoanById(loan.id) ?: return@launch
-        val newPrincipal = (currentLoan.principal - finalPrincipalPart).coerceAtLeast(0.0)
+        val newPrincipal = (currentLoan.principal - principalPart).coerceAtLeast(0.0)
         repository.updateLoan(currentLoan.copy(principal = newPrincipal))
 
-        // 8. Обновляем состояние, чтобы UI отразил изменения.
+        // 7. Обновляем состояние.
         loadOperations()
         loadLoans()
     }
@@ -183,9 +165,20 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     }
 
     /* ---------- график платежей ---------- */
+
+
+    /* ---------- график платежей ---------- */
+    /**
+     * Рассчитывает статичный график платежей на основе ИЗНАЧАЛЬНОЙ суммы кредита.
+     * Если начальная сумма для старого кредита не задана, для обратной совместимости
+     * используется текущий остаток.
+     */
     fun calculatePaymentSchedule(loan: Loan): List<PaymentScheduleItem> {
         val schedule = mutableListOf<PaymentScheduleItem>()
-        var remaining = BigDecimal(loan.principal.toString()).setScale(2, RoundingMode.HALF_EVEN)
+
+        // Используем initialPrincipal для расчета. Если его нет (старый кредит), используем текущий principal.
+        val principalForSchedule = if (loan.initialPrincipal > 0.0) loan.initialPrincipal else loan.principal
+        var remaining = BigDecimal(principalForSchedule.toString()).setScale(2, RoundingMode.HALF_EVEN)
         var date = loan.startDate
 
         // Функция для вычисления даты следующего платежа
@@ -193,8 +186,8 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
         fun nextPaymentDate(d: LocalDate) =
             d.plusMonths(1).withDayOfMonth(minOf(paymentDay, d.plusMonths(1).lengthOfMonth()))
 
-        // Фиксированный аннуитетный платёж, уже округлён до копеек
-        val rawPay = monthlyPayment(loan.principal, loan.interestRate, loan.months)
+        // Рассчитываем постоянный аннуитетный платёж на основе начальных данных
+        val rawPay = monthlyPayment(principalForSchedule, loan.interestRate, loan.months)
         val monthlyPay = BigDecimal(rawPay.toString()).setScale(2, RoundingMode.HALF_EVEN)
 
         repeat(loan.months) { i ->
@@ -263,6 +256,8 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
 
         return schedule
     }
+
+
 
 
 

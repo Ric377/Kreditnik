@@ -62,12 +62,12 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                sendNotification()
+//                sendNotification()
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         } else {
-            sendNotification()
+//            sendNotification()
         }
 
         val splashScreen = installSplashScreen()

@@ -14,7 +14,18 @@ data class Loan(
     val interestRate: Double,
     val startDate: LocalDate,
     val monthlyPaymentDay: Int,         // День месяца платежа для кредитов
+
+    /**
+     * Изначальная сумма кредита. Не меняется.
+     * Используется для расчета статичного графика платежей.
+     */
+    val initialPrincipal: Double,
+
+    /**
+     * Текущий остаток основного долга. Уменьшается с каждым платежом.
+     */
     val principal: Double,
+
     val months: Int,                    // Срок кредита (в месяцах)
 
     // Для кредитных карт
