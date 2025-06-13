@@ -122,21 +122,41 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
      */
     private suspend fun calculateAndAccrueInterestAndSave(loan: Loan): Loan {
         val today = LocalDate.now()
-        // Начисляем проценты только если текущая дата позже даты последнего начисления
-        if (loan.lastInterestCalculationDate.isBefore(today)) {
+        var updatedLoan = loan
+
+        // Случай 1: Дата была переведена НАЗАД
+        if (loan.lastInterestCalculationDate.isAfter(today)) {
+            val daysToGoBack = ChronoUnit.DAYS.between(today, loan.lastInterestCalculationDate).toInt()
+            if (daysToGoBack > 0) {
+                val dailyRate = loan.interestRate / 100.0 / 365.0
+                val interestToDeduct = loan.principal * dailyRate * daysToGoBack
+
+                val newAccruedInterest = (loan.accruedInterest - interestToDeduct).coerceAtLeast(0.0) // Проценты не могут быть отрицательными
+
+                updatedLoan = loan.copy(
+                    accruedInterest = newAccruedInterest,
+                    lastInterestCalculationDate = today
+                )
+                repository.updateLoan(updatedLoan)
+                Log.d("LoanViewModel", "DEBUG: Отмена процентов для ID: ${loan.id}, Дней: $daysToGoBack, Сумма отмены: $interestToDeduct. Новые проценты: ${updatedLoan.accruedInterest}")
+            }
+        }
+        // Случай 2: Дата была переведена ВПЕРЕД или наступил новый день
+        else if (loan.lastInterestCalculationDate.isBefore(today)) {
             val daysToAccrue = ChronoUnit.DAYS.between(loan.lastInterestCalculationDate, today).toInt()
             if (daysToAccrue > 0) {
                 val dailyRate = loan.interestRate / 100.0 / 365.0
                 val interestForPeriod = loan.principal * dailyRate * daysToAccrue
-                Log.d("LoanViewModel", "DEBUG: Начисление процентов для ID: ${loan.id}, Дней: $daysToAccrue, Сумма процентов: $interestForPeriod")
-                val updatedLoan = loan.copy(
+
+                updatedLoan = loan.copy(
                     accruedInterest = loan.accruedInterest + interestForPeriod,
                     lastInterestCalculationDate = today
                 )
-                repository.updateLoan(updatedLoan) // <<<--- ВОТ ЭТО ВАЖНО: сохраняем в БД!
-                return updatedLoan
+                repository.updateLoan(updatedLoan)
+                Log.d("LoanViewModel", "DEBUG: Начисление процентов для ID: ${loan.id}, Дней: $daysToAccrue, Сумма процентов: $interestForPeriod. Новые проценты: ${updatedLoan.accruedInterest}")
             }
         }
-        return loan // Возвращаем неизменный кредит, если проценты не начислялись или нечего сохранять
+        // Случай 3: lastInterestCalculationDate равна today (ничего не делать)
+        return updatedLoan
     }
 }

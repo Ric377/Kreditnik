@@ -139,12 +139,10 @@ fun LoanDetailScreen(
                     val totalAmountDue = loan.principal + loan.accruedInterest // Вычисляем общую сумму к погашению
 
                     LoanDetailItem("Тип кредита", loan.type.displayName)
-                    // Отображение общей суммы к погашению (основной долг + начисленные проценты)
                     LoanDetailItem("Общая сумма к погашению", "${totalAmountDue.formatMoney()} $currency")
-                    // Явное отображение текущего основного долга
                     LoanDetailItem("Остаток основного долга", "${loan.principal.formatMoney()} $currency")
-                    LoanDetailItem("Начальное тело кредита", "${loan.initialPrincipal.formatMoney()} $currency")
                     LoanDetailItem("Начисленные проценты", "${loan.accruedInterest.formatMoney()} $currency")
+                    LoanDetailItem("Изначальная сумма кредита", "${loan.initialPrincipal.formatMoney()} $currency")
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
                     LoanDetailItem("Срок", "${loan.months} месяцев")
                     LoanDetailItem(
