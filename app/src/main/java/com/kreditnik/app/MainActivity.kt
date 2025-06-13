@@ -144,7 +144,6 @@ class MainActivity : ComponentActivity() {
 
     enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     Credits("credits", Icons.AutoMirrored.Filled.List, "Кредиты"),
-    History("history", Icons.Filled.History, "История"),
     Analytics("analytics", Icons.Filled.PieChart, "Аналитика"),
     Settings("settings", Icons.Filled.Settings, "Настройки")
 }
@@ -198,9 +197,6 @@ fun MainScreen(
                     navController = navController
                 )
             }
-            composable(BottomNavItem.History.route) {
-                HistoryScreen(viewModel = loanViewModel)
-            }
             composable(BottomNavItem.Analytics.route) {
                 AnalyticsScreen()
             }
@@ -235,13 +231,6 @@ fun MainScreen(
                         loanViewModel = loanViewModel
                     )
                 }
-            }
-            composable(
-                route = "paymentSchedule/{loanId}",
-                arguments = listOf(navArgument("loanId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val loanId = backStackEntry.arguments?.getLong("loanId") ?: return@composable
-                PaymentScheduleScreen(loanViewModel, loanId)
             }
         }
     }

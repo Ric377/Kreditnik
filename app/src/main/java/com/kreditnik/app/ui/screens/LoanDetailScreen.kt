@@ -3,42 +3,21 @@ package com.kreditnik.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
-import com.kreditnik.app.viewmodel.SettingsViewModel
 import com.kreditnik.app.viewmodel.LoanViewModel
+import com.kreditnik.app.viewmodel.SettingsViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
-import com.kreditnik.app.data.Operation
-import com.kreditnik.app.data.OperationType
-import com.kreditnik.app.data.LoanType
-import java.time.LocalDateTime
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,11 +31,7 @@ fun LoanDetailScreen(
     val expandedMenu = remember { mutableStateOf(false) }
     val showAddDialog = remember { mutableStateOf(false) }
     val showPayDialog = remember { mutableStateOf(false) }
-    val showPrepayDialog = remember { mutableStateOf(false) }
     val amountInput = remember { mutableStateOf("") }
-    var extraInput by remember { mutableStateOf("") }
-    val showMonthlyConfirmDialog = remember { mutableStateOf(false) }
-
 
     Scaffold(
         topBar = {
@@ -69,7 +44,7 @@ fun LoanDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = { expandedMenu.value = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Меню действий")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Меню")
                     }
                     DropdownMenu(
                         expanded = expandedMenu.value,
@@ -100,24 +75,24 @@ fun LoanDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)                           // от TopAppBar / NavBar
-                .padding(horizontal = 0.dp, vertical = 8.dp),    // точь-в-точь как в History/Credits
-            verticalArrangement = Arrangement.spacedBy(4.dp)      // 4.dp между блоками, как в списках
+                .padding(innerPadding)
+                .padding(horizontal = 0.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Card(
-                shape = RoundedCornerShape(16.dp),                      // как в списках
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
                 ),
                 elevation = CardDefaults.cardElevation(0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)       // картинка-в-картинке: 16dp по бокам, 4dp сверху/снизу
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp) // внутренние отступы: 16/12 dp как в списках
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     LoanDetailItem("Тип кредита", loan.type.displayName)
                     LoanDetailItem("Сумма", "${loan.principal.formatMoney()} $currency")
@@ -129,16 +104,12 @@ fun LoanDetailScreen(
                     )
                     LoanDetailItem(
                         "Ежемесячный платёж",
-                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months)
-                            .formatMoney()} $currency"
-                    )
-                    LoanDetailItem(
-                        "Ближайший платёж",
-                        getNextPaymentDate(loan.startDate, loan.monthlyPaymentDay)
-                            .format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
+                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier
@@ -146,73 +117,24 @@ fun LoanDetailScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (loan.type == LoanType.CREDIT) {
-                    // Внести платёж
-                    Button(
-                        onClick = { showMonthlyConfirmDialog.value = true },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
-                    ) {
-                        Text(
-                            "Внести платёж",
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    // Досрочное погашение
-                    Button(
-                        onClick = { showPrepayDialog.value = true },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
-                    ) {
-                        Text(
-                            "Погасить досрочно",
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                } else {
-                    // Для остальных типов — старые кнопки
-                    Button(
-                        onClick = { showAddDialog.value = true },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Добавить", maxLines = 1)
-                    }
-                    Button(
-                        onClick = { showPayDialog.value = true },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Remove, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Погасить", maxLines = 1)
-                    }
+                Button(
+                    onClick = { showAddDialog.value = true },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Добавить", maxLines = 1)
                 }
-            }  // <-- Закрывающая скобка для Row
-
-
-
-
-            Spacer(modifier = Modifier.height(8.dp)) // Немного воздуха между рядами
-
-            Button(
-                onClick = {
-                    navController.navigate("paymentSchedule/${loan.id}")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("График платежей")
+                Button(
+                    onClick = { showPayDialog.value = true },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Погасить", maxLines = 1)
+                }
             }
         }
     }
@@ -230,32 +152,21 @@ fun LoanDetailScreen(
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        val amount = amountInput.value.toDoubleOrNull() ?: 0.0
-                        if (amount > 0) {
-                            loanViewModel.addOperation(
-                                Operation(
-                                    loanId = loan.id,
-                                    amount = amount,
-                                    date = LocalDateTime.now(),
-                                    type = OperationType.OTHER,
-                                    description = "Добавление долга"
-                                )
-                            )
-                            loanViewModel.updateLoanPrincipal(loan.id, amount)  // <--- вот это добавить
-                        }
-                        amountInput.value = ""
-                        showAddDialog.value = false
+                TextButton(onClick = {
+                    val amount = amountInput.value.toDoubleOrNull() ?: 0.0
+                    if (amount > 0) {
+                        loanViewModel.updateLoanPrincipal(loan.id, amount)
                     }
-                ) {
+                    amountInput.value = ""
+                    showAddDialog.value = false
+                }) {
                     Text("Добавить")
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showAddDialog.value = false
                     amountInput.value = ""
+                    showAddDialog.value = false
                 }) {
                     Text("Отмена")
                 }
@@ -276,100 +187,28 @@ fun LoanDetailScreen(
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        val amount = amountInput.value.toDoubleOrNull() ?: 0.0
-                        if (amount > 0) {
-                            loanViewModel.addOperation(
-                                Operation(
-                                    loanId = loan.id,
-                                    amount = -amount,
-                                    date = LocalDateTime.now(),
-                                    type = OperationType.PAYMENT,
-                                    description = "Погашение долга"
-                                )
-                            )
-                            loanViewModel.updateLoanPrincipal(loan.id, -amount)
-                        }
-                        amountInput.value = ""
-                        showPayDialog.value = false
-                    }
-                ) {
-                    Text("Погасить")
-                }
-            },
-            dismissButton = {
                 TextButton(onClick = {
-                    showPayDialog.value = false
+                    val amount = amountInput.value.toDoubleOrNull() ?: 0.0
+                    if (amount > 0) {
+                        loanViewModel.updateLoanPrincipal(loan.id, -amount)
+                    }
                     amountInput.value = ""
-                }) {
-                    Text("Отмена")
-                }
-            }
-        )
-    }
-
-    if (showPrepayDialog.value) {
-        AlertDialog(
-            onDismissRequest = { showPrepayDialog.value = false },
-            title = { Text("Досрочное погашение") },
-            text = {
-                OutlinedTextField(
-                    value = extraInput,
-                    onValueChange = { extraInput = it },
-                    label = { Text("Введите сумму") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    extraInput.toDoubleOrNull()?.takeIf { it > 0 }?.let {
-                        loanViewModel.prepay(loan, it)
-                    }
-                    extraInput = ""
-                    showPrepayDialog.value = false
+                    showPayDialog.value = false
                 }) {
                     Text("Погасить")
                 }
-            }
-            ,
-            dismissButton = {
-                TextButton(onClick = { showPrepayDialog.value = false }) {
-                    Text("Отмена")
-                }
-            }
-        )
-    }
-
-    if (showMonthlyConfirmDialog.value) {
-        AlertDialog(
-            onDismissRequest = { showMonthlyConfirmDialog.value = false },
-            title = { Text("Подтвердите платёж") },
-            text = {
-                Text(
-                    "Внести ежемесячный платёж:\n" +
-                            "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
-                )
             },
-            confirmButton = {
+            dismissButton = {
                 TextButton(onClick = {
-                    loanViewModel.payMonthly(loan)
-                    showMonthlyConfirmDialog.value = false
+                    amountInput.value = ""
+                    showPayDialog.value = false
                 }) {
-                    Text("Да")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showMonthlyConfirmDialog.value = false }) {
                     Text("Отмена")
                 }
             }
         )
     }
-
-
 }
-
 
 @Composable
 private fun LoanDetailItem(label: String, value: String) {
@@ -386,10 +225,8 @@ private fun LoanDetailItem(label: String, value: String) {
     }
 }
 
-// ====== Здесь заменили функцию форматирования ======
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
-    // Если дробная часть = 0, показываем без десятичных. Иначе – до двух знаков после точки.
     val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
     return DecimalFormat(pattern, sym).format(this)
 }
@@ -401,23 +238,5 @@ private fun calculateMonthlyPayment(principal: Double, annualRate: Double, month
     } else {
         principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) /
                 (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
-    }
-}
-
-private fun getNextPaymentDate(startDate: LocalDate, paymentDay: Int): LocalDate {
-    val today = LocalDate.now()
-
-    // Если paymentDay == 0, считаем за «последний день месяца»
-    val dayThisMonth = if (paymentDay == 0) today.lengthOfMonth()
-    else paymentDay.coerceAtMost(today.lengthOfMonth())
-    val thisMonthPayment = today.withDayOfMonth(dayThisMonth)
-
-    return if (today <= thisMonthPayment) {
-        thisMonthPayment
-    } else {
-        val nextMonth = today.plusMonths(1)
-        val dayNextMonth = if (paymentDay == 0) nextMonth.lengthOfMonth()
-        else paymentDay.coerceAtMost(nextMonth.lengthOfMonth())
-        nextMonth.withDayOfMonth(dayNextMonth)
     }
 }
