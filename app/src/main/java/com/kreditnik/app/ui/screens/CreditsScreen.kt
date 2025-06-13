@@ -28,6 +28,7 @@ import com.kreditnik.app.viewmodel.SettingsViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
+import androidx.activity.compose.BackHandler
 
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
@@ -163,6 +164,11 @@ fun CreditsScreen(
             }
         }
     ) { innerPadding ->
+        // >>>>> ВСТАВКА КОДА НАЧИНАЕТСЯ ЗДЕСЬ <<<<<
+        BackHandler(enabled = selectedLoans.isNotEmpty()) {
+            selectedLoans = emptySet() // Сбросить выделение при нажатии "Назад"
+        }
+        // >>>>> ВСТАВКА КОДА ЗАКОНЧИЛАСЬ ЗДЕСЬ <<<<<
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
