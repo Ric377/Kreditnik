@@ -1,3 +1,4 @@
+// LoanDetailScreen.kt
 package com.kreditnik.app.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -138,9 +139,11 @@ fun LoanDetailScreen(
                     val totalAmountDue = loan.principal + loan.accruedInterest // Вычисляем общую сумму к погашению
 
                     LoanDetailItem("Тип кредита", loan.type.displayName)
-                    // Изменено здесь: отображаем totalAmountDue вместо loan.principal
-                    LoanDetailItem("Сумма", "${totalAmountDue.formatMoney()} $currency")
-                    LoanDetailItem("Тело кредита", "${loan.initialPrincipal.formatMoney()} $currency")
+                    // Отображение общей суммы к погашению (основной долг + начисленные проценты)
+                    LoanDetailItem("Общая сумма к погашению", "${totalAmountDue.formatMoney()} $currency")
+                    // Явное отображение текущего основного долга
+                    LoanDetailItem("Остаток основного долга", "${loan.principal.formatMoney()} $currency")
+                    LoanDetailItem("Начальное тело кредита", "${loan.initialPrincipal.formatMoney()} $currency")
                     LoanDetailItem("Начисленные проценты", "${loan.accruedInterest.formatMoney()} $currency")
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
                     LoanDetailItem("Срок", "${loan.months} месяцев")
