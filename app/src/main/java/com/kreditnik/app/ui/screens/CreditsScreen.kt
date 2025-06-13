@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavController
 import com.kreditnik.app.R
 import com.kreditnik.app.data.Loan
@@ -112,6 +113,39 @@ private fun LoanListItem(
 }
 
 @Composable
+private fun MotivationCard(text: String) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+        ),
+        elevation = CardDefaults.cardElevation(0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(72.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                ),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
+}
+
+
+
+@Composable
 fun CreditsScreen(
     loanViewModel: LoanViewModel,
     settingsViewModel: SettingsViewModel,
@@ -187,11 +221,21 @@ fun CreditsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            if (motivationalQuotes.isNotEmpty()) {
+                HorizontalPager(
+                    count = motivationalQuotes.size,
+                    state = pagerState,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) { page ->
+                    MotivationCard(text = motivationalQuotes[page])
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 0.dp, vertical = 8.dp),
-                contentPadding = PaddingValues()
+                    .padding(vertical = 8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(loans, key = { it.id }) { loan ->
                     LoanListItem(
@@ -216,40 +260,6 @@ fun CreditsScreen(
                         }
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-
-            Divider()
-
-            Text(
-                text = "Совет на сегодня:",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            HorizontalPager(
-                count = motivationalQuotes.size,
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            ) { page ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp, horizontal = 16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = motivationalQuotes[page],
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
                 }
             }
         }
