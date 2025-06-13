@@ -22,12 +22,16 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     }
 
     fun loadLoans() = viewModelScope.launch {
-        // При загрузке всех кредитов, сначала начисляем проценты для каждого, затем обновляем список
-        // Важно: мы не сохраняем эти изменения сразу в БД, а только для отображения в UI.
-        // Сохранение происходит при updateLoanPrincipal или других явных операциях.
-        _loans.value = repository.getAllLoans().map { loan ->
-            calculateAndAccrueInterest(loan)
+        val currentLoans = repository.getAllLoans()
+        val updatedLoansForUi = mutableListOf<Loan>() // Список для обновления UI
+
+        for (loan in currentLoans) {
+            // !!! ИСПРАВЛЕНИЕ ЗДЕСЬ !!!
+            // Вызываем функцию, которая рассчитает проценты И СОХРАНИТ их в БД.
+            val loanAfterAccrual = calculateAndAccrueInterestAndSave(loan)
+            updatedLoansForUi.add(loanAfterAccrual)
         }
+        _loans.value = updatedLoansForUi // Обновляем UI после всех пересчетов и сохранений
     }
 
     suspend fun addLoan(loan: Loan) {
@@ -51,7 +55,9 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
             // --- ШАГ 1: Актуализация процентов до применения транзакции ---
             // Сначала убедимся, что проценты для этого кредита актуальны на текущий день
             // Эта функция возвращает новую копию Loan с актуальными процентами и датой начисления
-            val loanWithAccruedInterest = calculateAndAccrueInterest(currentLoanFromDb)
+            // !!! ИСПРАВЛЕНИЕ ЗДЕСЬ !!!
+            // Используем calculateAndAccrueInterestAndSave, чтобы проценты были актуальны и СОХРАНЕНЫ перед платежом
+            val loanWithAccruedInterest = calculateAndAccrueInterestAndSave(currentLoanFromDb)
 
             // Переменные для новых значений principal и accruedInterest
             var newPrincipal = loanWithAccruedInterest.principal // Текущий остаток основного долга (тело кредита)
@@ -109,11 +115,12 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     }
 
     /**
-     * Приватная функция для расчета и начисления ежедневных процентов.
+     * Приватная функция для расчета и начисления ежедневных процентов,
+     * а также сохранения обновленного кредита в базу данных.
      * Возвращает НОВЫЙ объект Loan с актуализированными accruedInterest и lastInterestCalculationDate.
-     * НЕ СОХРАНЯЕТ В БАЗУ ДАННЫХ.
+     * СОХРАНЯЕТ В БАЗУ ДАННЫХ.
      */
-    private fun calculateAndAccrueInterest(loan: Loan): Loan {
+    private suspend fun calculateAndAccrueInterestAndSave(loan: Loan): Loan {
         val today = LocalDate.now()
         // Начисляем проценты только если текущая дата позже даты последнего начисления
         if (loan.lastInterestCalculationDate.isBefore(today)) {
@@ -122,12 +129,14 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
                 val dailyRate = loan.interestRate / 100.0 / 365.0
                 val interestForPeriod = loan.principal * dailyRate * daysToAccrue
                 Log.d("LoanViewModel", "DEBUG: Начисление процентов для ID: ${loan.id}, Дней: $daysToAccrue, Сумма процентов: $interestForPeriod")
-                return loan.copy(
+                val updatedLoan = loan.copy(
                     accruedInterest = loan.accruedInterest + interestForPeriod,
                     lastInterestCalculationDate = today
                 )
+                repository.updateLoan(updatedLoan) // <<<--- ВОТ ЭТО ВАЖНО: сохраняем в БД!
+                return updatedLoan
             }
         }
-        return loan // Возвращаем неизменный кредит, если проценты не начислялись
+        return loan // Возвращаем неизменный кредит, если проценты не начислялись или нечего сохранять
     }
 }
