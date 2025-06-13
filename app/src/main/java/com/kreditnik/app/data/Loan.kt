@@ -1,3 +1,4 @@
+// Loan.kt
 package com.kreditnik.app.data
 
 import androidx.room.Entity
@@ -27,6 +28,10 @@ data class Loan(
     val principal: Double,
 
     val months: Int,                    // Срок кредита (в месяцах)
+
+    // НОВЫЕ ПОЛЯ для ежедневных процентов (НЕ МЕНЯЮТ ДИЗАЙН НАПРЯМУЮ)
+    val accruedInterest: Double = 0.0, // Начисленные, но еще не оплаченные проценты
+    val lastInterestCalculationDate: LocalDate = startDate, // Дата последнего начисления процентов
 
     // Для кредитных карт
     val gracePeriodDays: Int?,          // Льготный период в днях

@@ -38,6 +38,8 @@ private fun Double.formatMoney(): String {
 
 @Composable
 private fun LoanRowContent(loan: Loan, currency: String) {
+    val totalAmountForDisplay = loan.principal + loan.accruedInterest // Вычисляем общую сумму к погашению для отображения
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -68,8 +70,9 @@ private fun LoanRowContent(loan: Loan, currency: String) {
             modifier = Modifier.weight(1f)
         )
 
+        // Изменено: отображаем totalAmountForDisplay вместо loan.principal
         Text(
-            text = "${loan.principal.formatMoney()} $currency",
+            text = "${totalAmountForDisplay.formatMoney()} $currency",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -115,8 +118,11 @@ fun CreditsScreen(
     val currency by settingsViewModel.defaultCurrency.collectAsState()
     var selectedLoans by remember { mutableStateOf(setOf<Long>()) }
 
+    // Изменено: общая сумма теперь суммирует principal + accruedInterest по всем кредитам
     val total by remember(loans) {
-        derivedStateOf { loans.sumOf { it.principal }.formatMoney() }
+        derivedStateOf {
+            loans.sumOf { it.principal + it.accruedInterest }.formatMoney()
+        }
     }
 
     Scaffold(
@@ -164,11 +170,9 @@ fun CreditsScreen(
             }
         }
     ) { innerPadding ->
-        // >>>>> ВСТАВКА КОДА НАЧИНАЕТСЯ ЗДЕСЬ <<<<<
         BackHandler(enabled = selectedLoans.isNotEmpty()) {
             selectedLoans = emptySet() // Сбросить выделение при нажатии "Назад"
         }
-        // >>>>> ВСТАВКА КОДА ЗАКОНЧИЛАСЬ ЗДЕСЬ <<<<<
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

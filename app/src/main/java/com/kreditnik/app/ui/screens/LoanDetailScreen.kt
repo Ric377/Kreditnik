@@ -18,8 +18,8 @@ import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.text.KeyboardOptions
 import java.util.*
-import java.time.LocalDate // Добавил импорт LocalDate
-import java.time.temporal.TemporalAdjusters // Добавил импорт TemporalAdjusters
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,8 +135,13 @@ fun LoanDetailScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
+                    val totalAmountDue = loan.principal + loan.accruedInterest // Вычисляем общую сумму к погашению
+
                     LoanDetailItem("Тип кредита", loan.type.displayName)
-                    LoanDetailItem("Сумма", "${loan.principal.formatMoney()} $currency")
+                    // Изменено здесь: отображаем totalAmountDue вместо loan.principal
+                    LoanDetailItem("Сумма", "${totalAmountDue.formatMoney()} $currency")
+                    LoanDetailItem("Тело кредита", "${loan.initialPrincipal.formatMoney()} $currency")
+                    LoanDetailItem("Начисленные проценты", "${loan.accruedInterest.formatMoney()} $currency")
                     LoanDetailItem("Процентная ставка", "${loan.interestRate}%")
                     LoanDetailItem("Срок", "${loan.months} месяцев")
                     LoanDetailItem(
@@ -147,9 +152,7 @@ fun LoanDetailScreen(
                         "Ежемесячный платёж",
                         "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
                     )
-                    // >>> НОВАЯ ВСТАВКА ЗДЕСЬ <<<
                     LoanDetailItem("Дата платежа", nextPaymentDate)
-                    // >>> КОНЕЦ НОВОЙ ВСТАВКИ <<<
                 }
             }
 
