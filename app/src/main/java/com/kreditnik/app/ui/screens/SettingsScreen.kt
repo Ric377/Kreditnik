@@ -1,25 +1,28 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.kreditnik.app.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kreditnik.app.viewmodel.SettingsViewModel
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.sp // Импорт для sp
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight // Для стрелки "далее"
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kreditnik.app.viewmodel.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
@@ -27,16 +30,23 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
 
     var currencyMenuExpanded by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
-    var showPrivacyPolicyDialog by remember { mutableStateOf(false) } // Состояние для показа диалога Политики конфиденциальности
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+
+    val density = LocalDensity.current
+
+    // Состояния для хранения ширины и высоты TextButton
+    var textButtonWidthPx by remember { mutableStateOf(0) }
+    var textButtonHeightPx by remember { mutableStateOf(0) }
+    // Состояние для хранения глобальной позиции TextButton
+    var textButtonGlobalPositionX by remember { mutableStateOf(0f) } // <-- ВОЗВРАЩАЕМ X
+    var textButtonGlobalPositionY by remember { mutableStateOf(0f) }
+
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = "Настройки",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Text("Настройки", style = MaterialTheme.typography.headlineSmall)
                 }
             )
         }
@@ -45,114 +55,170 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState()) // Добавляем прокрутку
+                .padding(vertical = 8.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            // Раздел: Общие настройки
-            SettingSectionHeader(title = "Общие")
-            Divider()
+            // Валюта по умолчанию
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Валюта по умолчанию",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
 
-            // Настройка: Валюта по умолчанию
-            ListItem(
-                headlineContent = { Text("Валюта по умолчанию") },
-                supportingContent = { Text("Выбранная валюта: $defaultCurrency") },
-                trailingContent = {
-                    Box {
+                    Box(
+                        // Убираем wrapContentSize(align = Alignment.TopEnd) для Box,
+                        // если хотим, чтобы меню выпадало из левого края кнопки.
+                        // Просто wrapContentSize() или без него, если TextButton сам определяет размер
+                        modifier = Modifier.wrapContentSize(Alignment.TopStart) // Чтобы Box соответствовал TopStart кнопки
+                    ) {
                         TextButton(
                             onClick = { currencyMenuExpanded = true },
-                            modifier = Modifier.height(36.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            modifier = Modifier
+                                .onGloballyPositioned { coordinates ->
+                                    // Получаем размеры и глобальную позицию TextButton
+                                    textButtonWidthPx = coordinates.size.width
+                                    textButtonHeightPx = coordinates.size.height
+                                    textButtonGlobalPositionX = coordinates.positionInWindow().x // <-- ВОЗВРАЩАЕМ X
+                                    textButtonGlobalPositionY = coordinates.positionInWindow().y
+                                }
                         ) {
                             Text(
                                 text = defaultCurrency,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp) // <-- Изменено на 20sp, чтобы лучше вписывалось
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.primary
                             )
-
-                            Spacer(Modifier.width(4.dp))
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Открыть выбор валюты")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                         }
 
                         DropdownMenu(
                             expanded = currencyMenuExpanded,
-                            onDismissRequest = { currencyMenuExpanded = false }
+                            onDismissRequest = { currencyMenuExpanded = false },
+                            offset = DpOffset(
+                                x = 0.dp,
+                                y = with(density) { textButtonHeightPx.toDp() } - 103.dp
+                            ),
+
+
+                            properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+                            modifier = Modifier
+                                // Устанавливаем ширину DropdownMenu равной ширине TextButton
+                                .width(with(density) { textButtonWidthPx.toDp() })
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(vertical = 4.dp)
                         ) {
                             settingsViewModel.availableCurrencies.forEach { currency ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = currency,
-                                            style = MaterialTheme.typography.bodyLarge // <-- Применяем bodyLarge для пунктов списка
-                                        )
-                                    },
                                     onClick = {
                                         settingsViewModel.setDefaultCurrency(currency)
                                         currencyMenuExpanded = false
+                                    },
+                                    text = {
+                                        Text(
+                                            text = currency,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
                                     }
                                 )
                             }
                         }
                     }
-                },
+                }
+            }
+
+            // Темная тема
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { currencyMenuExpanded = true } // Делаем всю строку кликабельной
-            )
-            Divider()
-
-            // Раздел: Визуальные настройки
-            SettingSectionHeader(title = "Визуальные")
-            Divider()
-
-            // Настройка: Темная тема
-            ListItem(
-                headlineContent = { Text("Темная тема") },
-                supportingContent = { Text("Включить или выключить темную тему") },
-                trailingContent = {
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clickable { settingsViewModel.setDarkMode(!darkModeEnabled) }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Темная тема",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
                     Switch(
                         checked = darkModeEnabled,
-                        onCheckedChange = { enabled ->
-                            settingsViewModel.setDarkMode(enabled)
+                        onCheckedChange = {
+                            settingsViewModel.setDarkMode(it)
                         }
                     )
-                },
+                }
+            }
+
+            // Объединённый блок
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { settingsViewModel.setDarkMode(!darkModeEnabled) } // Переключаем по клику на всю строку
-            )
-            Divider()
-
-            // Дополнительные настройки (если появятся)
-            SettingSectionHeader(title = "Дополнительно")
-            Divider()
-
-            ListItem(
-                headlineContent = { Text("О приложении") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showAboutDialog = true } // Теперь клик открывает диалог
-            )
-            Divider()
-
-            // НОВЫЙ ПУНКТ: Политика конфиденциальности
-            ListItem(
-                headlineContent = { Text("Политика конфиденциальности") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showPrivacyPolicyDialog = true } // Открывает диалог с политикой
-            )
-            Divider()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .height(140.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clickable { showAboutDialog = true }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text("О приложении", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Divider()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clickable { showPrivacyPolicyDialog = true }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text("Политика конфиденциальности", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
         }
     }
 
-    // Диалог "О приложении"
     if (showAboutDialog) {
         AlertDialog(
-            onDismissRequest = { showAboutDialog = false }, // Закрыть диалог при нажатии вне его
+            onDismissRequest = { showAboutDialog = false },
             title = { Text("О приложении Кредитник") },
             text = {
                 Column {
-                    Text("Версия: 1.0.0") // Можете заменить на BuildConfig.VERSION_NAME если у вас есть
+                    Text("Версия: 1.0.0")
                     Text("Разработано: Челидзе Ричард")
                     Spacer(Modifier.height(8.dp))
-                    Text("Кредитник - ваш удобный помощник в управлении кредитами.")
+                    Text("Кредитник — ваш помощник в управлении кредитами.")
                 }
             },
             confirmButton = {
@@ -163,44 +229,17 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
         )
     }
 
-    // Диалог "Политика конфиденциальности"
     if (showPrivacyPolicyDialog) {
         AlertDialog(
-            onDismissRequest = { showPrivacyPolicyDialog = false }, // Закрыть диалог при нажатии вне его
+            onDismissRequest = { showPrivacyPolicyDialog = false },
             title = { Text("Политика конфиденциальности") },
             text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) { // Делаем текст прокручиваемым
-                    Text("Дата вступления в силу: 13 Июня 2025") // Автоматически установленная дата
-
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Дата вступления в силу: 13 Июня 2025")
                     Spacer(Modifier.height(8.dp))
-                    Text("1. Сбор и хранение данных")
-                    Text("Приложение Kreditnik (далее \"Приложение\") предназначено для персонального управления вашими финансовыми обязательствами (кредитами и долгами). Все данные, которые вы вводите в Приложение (такие как названия кредитов, суммы, процентные ставки, даты платежей, история платежей), хранятся ИСКЛЮЧИТЕЛЬНО на вашем мобильном устройстве.")
-                    Text("Приложение НЕ собирает, НЕ передает и НЕ хранит ваши персональные данные на внешних серверах или в облачных хранилищах.")
-                    Text("Приложение НЕ использует сторонние сервисы для аналитики, рекламы или сбора информации о пользователях.")
-
+                    Text("Ваши данные хранятся только на устройстве и не передаются третьим лицам.")
                     Spacer(Modifier.height(8.dp))
-                    Text("2. Использование данных")
-                    Text("Ваши данные используются исключительно для предоставления функционала Приложения: расчета платежей, отслеживания задолженностей, начисления процентов и отображения информации о ваших финансовых обязательствах. Мы не используем ваши данные для каких-либо других целей.")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("3. Безопасность данных")
-                    Text("Поскольку все данные хранятся локально на вашем устройстве, безопасность данных в первую очередь зависит от безопасности вашего устройства. Мы стремимся обеспечить защиту данных в рамках функционала Приложения, но не можем гарантировать безопасность устройства пользователя.")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("4. Передача данных третьим лицам")
-                    Text("Ваши личные данные не передаются, не продаются и не обмениваются с третьими лицами, за исключением случаев, когда это явно разрешено вами (например, функция экспорта данных, если она будет реализована).")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("5. Права пользователя")
-                    Text("Вы имеете полный контроль над своими данными в Приложении. Вы можете просматривать, изменять и удалять любые введенные вами данные непосредственно через интерфейс Приложения.")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("6. Изменения в политике конфиденциальности")
-                    Text("Мы можем периодически обновлять нашу Политику конфиденциальности. Мы уведомим вас о любых изменениях, опубликовав новую Политику конфиденциальности в Приложении. Рекомендуется периодически просматривать эту Политику конфиденциальности на предмет изменений.")
-
-                    Spacer(Modifier.height(8.dp))
-                    Text("7. Контактная информация")
-                    Text("Если у вас есть вопросы или предложения относительно нашей Политики конфиденциальности, пожалуйста, свяжитесь с нами по адресу: ric.ch@yandex.ru") // Замените на свой реальный email
+                    Text("Контакт: ric.ch@yandex.ru")
                 }
             },
             confirmButton = {
@@ -210,17 +249,4 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             }
         )
     }
-}
-
-// Вспомогательный Composable для заголовков секций
-@Composable
-fun SettingSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary, // Или secondary, в зависимости от палитры
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    )
 }
