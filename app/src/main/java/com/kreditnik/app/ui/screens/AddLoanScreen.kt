@@ -39,7 +39,7 @@ fun AddLoanScreen(
 ) {
     // ==== Переменные состояния ====
     var name by remember { mutableStateOf(loan?.name ?: "") }
-    var principal by remember { mutableStateOf(loan?.principal?.toString() ?: "") }
+    var principal by remember { mutableStateOf(loan?.initialPrincipal?.toString() ?: "") }
     var interestRate by remember { mutableStateOf(loan?.interestRate?.toString() ?: "") }
     var months by remember { mutableStateOf(loan?.months?.toString() ?: "") }
     var selectedType by remember { mutableStateOf(loan?.type ?: LoanType.CREDIT) }
@@ -400,14 +400,21 @@ fun AddLoanScreen(
                                 val updatedLoan = loan.copy(
                                     name = name,
                                     type = selectedType,
+                                    logo = loan.logo, // Сохраняем существующий логотип
                                     interestRate = loanInterestRate!!,
                                     startDate = selectedDate,
                                     monthlyPaymentDay = selectedPaymentDay,
-                                    principal = loanPrincipal!!,
+                                    initialPrincipal = loanPrincipal!!, // Обновляем initialPrincipal из поля ввода (теперь это поле "Сумма кредита")
+                                    principal = loan.principal,         // ОСТАВЛЯЕМ ТЕКУЩИЙ principal без изменений (он меняется только платежами погашения/добавления)
                                     months = loanMonths!!,
-                                    // <<< И ИЗМЕНЕНИЕ ЗДЕСЬ >>>
-                                    dayCountConvention = DayCountConvention.RETAIL,
-                                    initialPrincipal = if (loan.initialPrincipal > 0.0) loan.initialPrincipal else loanPrincipal
+                                    accruedInterest = loan.accruedInterest, // Сохраняем начисленные проценты как есть
+                                    lastInterestCalculationDate = loan.lastInterestCalculationDate, // Сохраняем дату последнего начисления как есть
+                                    dayCountConvention = DayCountConvention.RETAIL, // Используем установленную конвенцию
+                                    // Поля для кредитных карт (передаем текущие значения, так как они не редактируются на этом экране)
+                                    gracePeriodDays = loan.gracePeriodDays,
+                                    mandatoryPaymentDay = loan.mandatoryPaymentDay,
+                                    gracePeriodEndDate = loan.gracePeriodEndDate,
+                                    debtDueDate = loan.debtDueDate
                                 )
                                 loanViewModel.updateLoan(updatedLoan)
                             }
