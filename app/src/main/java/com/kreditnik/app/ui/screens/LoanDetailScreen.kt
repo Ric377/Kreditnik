@@ -18,6 +18,8 @@ import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.text.KeyboardOptions
 import java.util.*
+import java.time.LocalDate // Добавил импорт LocalDate
+import java.time.temporal.TemporalAdjusters // Добавил импорт TemporalAdjusters
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +34,45 @@ fun LoanDetailScreen(
     val showAddDialog = remember { mutableStateOf(false) }
     val showPayDialog = remember { mutableStateOf(false) }
     val amountInput = remember { mutableStateOf("") }
+
+    // Расчет даты следующего платежа
+    val nextPaymentDate by remember(loan.startDate, loan.monthlyPaymentDay) {
+        derivedStateOf {
+            val today = LocalDate.now()
+            var nextDate = loan.startDate
+
+            // Если дата открытия уже прошла в текущем месяце, то ищем в следующем
+            if (loan.startDate.dayOfMonth > today.dayOfMonth && loan.startDate.month == today.month && loan.startDate.year == today.year) {
+                // Если сегодня 15, а дата открытия 20, и месяц текущий, то следующая дата в этом месяце
+                nextDate = loan.startDate
+            } else if (loan.monthlyPaymentDay == 0) { // "Последний день месяца"
+                // Если день платежа "Последний день месяца"
+                if (today.dayOfMonth >= today.lengthOfMonth()) {
+                    // Если сегодня последний день месяца или позже, то следующий платеж в следующем месяце
+                    nextDate = today.plusMonths(1).with(TemporalAdjusters.lastDayOfMonth())
+                } else {
+                    nextDate = today.with(TemporalAdjusters.lastDayOfMonth())
+                }
+            } else {
+                // Если день платежа конкретное число
+                val targetDay = loan.monthlyPaymentDay
+                if (today.dayOfMonth >= targetDay) {
+                    // Если текущий день >= дню платежа, то следующий платеж в следующем месяце
+                    nextDate = today.plusMonths(1).withDayOfMonth(targetDay)
+                } else {
+                    // Иначе, следующий платеж в текущем месяце
+                    nextDate = today.withDayOfMonth(targetDay)
+                }
+            }
+
+            // Убедимся, что дата не раньше даты открытия
+            if (nextDate.isBefore(loan.startDate)) {
+                nextDate = loan.startDate
+            }
+            nextDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -106,6 +147,9 @@ fun LoanDetailScreen(
                         "Ежемесячный платёж",
                         "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
                     )
+                    // >>> НОВАЯ ВСТАВКА ЗДЕСЬ <<<
+                    LoanDetailItem("Дата платежа", nextPaymentDate)
+                    // >>> КОНЕЦ НОВОЙ ВСТАВКИ <<<
                 }
             }
 
