@@ -1,6 +1,8 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.kreditnik.app.ui.screens
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,21 +29,19 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
-// Форматируем сумму: "1 234 567" или "1 234 567.89"
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
     return DecimalFormat(pattern, sym).format(this)
 }
 
-/** Контент одной строки списка кредитов */
 @Composable
 private fun LoanRowContent(loan: Loan, currency: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp) // точно как в HistoryScreen
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Surface(
             shape = CircleShape,
@@ -72,29 +75,35 @@ private fun LoanRowContent(loan: Loan, currency: String) {
     }
 }
 
-/** Одна карточка-кредит */
 @Composable
 private fun LoanListItem(
     loan: Loan,
     currency: String,
-    onClick: () -> Unit = {}
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
     Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp), // как в операциях
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            else
+                MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
         ),
         elevation = CardDefaults.cardElevation(0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp) // vertical = 4.dp совпадает с HistoryScreen
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         LoanRowContent(loan, currency)
     }
 }
 
-/** Экран "Кредиты" */
 @Composable
 fun CreditsScreen(
     loanViewModel: LoanViewModel,
@@ -103,6 +112,7 @@ fun CreditsScreen(
 ) {
     val loans by loanViewModel.loans.collectAsState()
     val currency by settingsViewModel.defaultCurrency.collectAsState()
+    var selectedLoans by remember { mutableStateOf(setOf<Long>()) }
 
     val total by remember(loans) {
         derivedStateOf { loans.sumOf { it.principal }.formatMoney() }
@@ -110,16 +120,42 @@ fun CreditsScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Общая сумма: $total $currency",
-                        style = MaterialTheme.typography.headlineSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            )
+            if (selectedLoans.isEmpty()) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = "Общая сумма: $total $currency",
+                            style = MaterialTheme.typography.headlineSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
+            } else {
+                CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { selectedLoans = emptySet() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Отменить выделение")
+                        }
+                    },
+                    title = { Text("${selectedLoans.size} выбрано") },
+                    actions = {
+                        IconButton(onClick = {
+                            selectedLoans = loans.map { it.id }.toSet()
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Выбрать все")
+                        }
+                        IconButton(onClick = {
+                            selectedLoans.forEach { id ->
+                                loanViewModel.deleteLoan(loans.first { it.id == id })
+                            }
+                            selectedLoans = emptySet()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Удалить выбранные")
+                        }
+                    }
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate("addLoan") }) {
@@ -130,15 +166,33 @@ fun CreditsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)                 // отступ под AppBar и над NavigationBar
-                .padding(horizontal = 0.dp, vertical = 8.dp), // vertical = 8.dp как в HistoryScreen
-            contentPadding = PaddingValues() // горизонтальных pad'ов здесь не нужно
+                .padding(innerPadding)
+                .padding(horizontal = 0.dp, vertical = 8.dp),
+            contentPadding = PaddingValues()
         ) {
             items(loans, key = { it.id }) { loan ->
-                LoanListItem(loan, currency) {
-                    navController.navigate("loanDetail/${loan.id}")
-                }
-                Spacer(modifier = Modifier.height(4.dp)) // как в истории: разделитель через 4.dp
+                LoanListItem(
+                    loan = loan,
+                    currency = currency,
+                    isSelected = loan.id in selectedLoans,
+                    onClick = {
+                        if (selectedLoans.isNotEmpty()) {
+                            selectedLoans = if (loan.id in selectedLoans)
+                                selectedLoans - loan.id
+                            else
+                                selectedLoans + loan.id
+                        } else {
+                            navController.navigate("loanDetail/${loan.id}")
+                        }
+                    },
+                    onLongClick = {
+                        selectedLoans = if (loan.id in selectedLoans)
+                            selectedLoans - loan.id
+                        else
+                            selectedLoans + loan.id
+                    }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }
