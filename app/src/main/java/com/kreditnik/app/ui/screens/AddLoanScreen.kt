@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -36,8 +37,6 @@ fun AddLoanScreen(
     navController: NavController,
     loan: Loan? = null
 ) {
-    var selectedConvention by remember { mutableStateOf(loan?.dayCountConvention ?: DayCountConvention.SBER) }
-
     // ==== Переменные состояния ====
     var name by remember { mutableStateOf(loan?.name ?: "") }
     var principal by remember { mutableStateOf(loan?.principal?.toString() ?: "") }
@@ -85,11 +84,11 @@ fun AddLoanScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp) // Везде одинаковые отступы
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp) // Тоже одинаково
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Здесь начинается форма: OutlinedTextField, DropdownMenu и так далее
+            // ... (весь код до блока с ежемесячным платежом остается без изменений)
 
             OutlinedTextField(
                 value = name,
@@ -107,11 +106,10 @@ fun AddLoanScreen(
                     text = "Введите название кредита",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 16.dp) // отступ под «иконку» поля
+                    modifier = Modifier.padding(start = 16.dp)
                 )
             }
 
-            // ==== БЛОК 2: Тип кредита ====
             ExposedDropdownMenuBox(
                 expanded = typeMenuExpanded,
                 onExpandedChange = { typeMenuExpanded = !typeMenuExpanded },
@@ -145,7 +143,6 @@ fun AddLoanScreen(
                 }
             }
 
-            // ==== БЛОК 3: Сумма кредита ====
             OutlinedTextField(
                 value = principal,
                 onValueChange = { newValue ->
@@ -169,7 +166,6 @@ fun AddLoanScreen(
                 )
             }
 
-            // ==== БЛОК 4: Процентная ставка (%) ====
             OutlinedTextField(
                 value = interestRate,
                 onValueChange = { newValue ->
@@ -193,7 +189,6 @@ fun AddLoanScreen(
                 )
             }
 
-            // ==== БЛОК 5: Срок кредита (в месяцах) ====
             OutlinedTextField(
                 value = months,
                 onValueChange = { newValue ->
@@ -217,7 +212,6 @@ fun AddLoanScreen(
                 )
             }
 
-            // ==== БЛОК 6: Дата открытия ====
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -253,7 +247,6 @@ fun AddLoanScreen(
                 )
             }
 
-            // ==== БЛОК 7: День платежа ====
             ExposedDropdownMenuBox(
                 expanded = paymentDayExpanded,
                 onExpandedChange = { paymentDayExpanded = !paymentDayExpanded },
@@ -318,46 +311,8 @@ fun AddLoanScreen(
                 shape = fieldShape,
                 modifier = Modifier.fillMaxWidth()
             )
-            if (autoCalculatePayment) {
-                val conventionLabels = mapOf(
-                    DayCountConvention.RETAIL to "Стандартный",
-                    DayCountConvention.SBER   to "Ежедневный (Сбербанк)"
-                )
-                var conventionExpanded by remember { mutableStateOf(false) }
 
-                ExposedDropdownMenuBox(
-                    expanded = conventionExpanded,
-                    onExpandedChange = { conventionExpanded = !conventionExpanded },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        readOnly = true,
-                        value = conventionLabels[selectedConvention]!!,
-                        onValueChange = {},
-                        label = { Text("Метод расчёта") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = conventionExpanded) },
-                        shape = fieldShape,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        colors = OutlinedTextFieldDefaults.colors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = conventionExpanded,
-                        onDismissRequest = { conventionExpanded = false }
-                    ) {
-                        DayCountConvention.values().forEach { conv ->
-                            DropdownMenuItem(
-                                text = { Text(conventionLabels[conv]!!) },
-                                onClick = {
-                                    selectedConvention = conv
-                                    conventionExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
+            // <<< ЗДЕСЬ БЫЛ УДАЛЕН БЛОК ВЫБОРА МЕТОДА РАСЧЕТА >>>
 
             if (monthlyPaymentError) {
                 Text(
@@ -376,18 +331,18 @@ fun AddLoanScreen(
                     val loanInterestRate = interestRate.toDoubleOrNull()
                     if (loanPrincipal != null && loanMonths != null && loanInterestRate != null && loanMonths > 0) {
                         val monthlyRate = (loanInterestRate / 100) / 12
-                        // если ставка нулевая, просто делим
                         val calculatedPayment = if (monthlyRate == 0.0) {
                             loanPrincipal / loanMonths
                         } else {
                             loanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, loanMonths.toDouble())) /
                                     (Math.pow(1 + monthlyRate, loanMonths.toDouble()) - 1)
                         }
-                        // заполняем строку двумя знаками после запятой
                         manualMonthlyPayment = String.format("%.2f", calculatedPayment)
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
 
             // ==== БЛОК 9: Кнопка «Сохранить» с валидацией ====
             Button(
@@ -423,7 +378,6 @@ fun AddLoanScreen(
                     if (!hasError) {
                         scope.launch {
                             if (loan == null) {
-                                // --- ИЗМЕНЕНИЕ ЗДЕСЬ (создание нового кредита) ---
                                 val newLoan = Loan(
                                     name = name,
                                     type = selectedType,
@@ -431,7 +385,6 @@ fun AddLoanScreen(
                                     interestRate = loanInterestRate!!,
                                     startDate = selectedDate,
                                     monthlyPaymentDay = selectedPaymentDay,
-                                    // При создании нового кредита, начальная и текущая сумма равны
                                     initialPrincipal = loanPrincipal!!,
                                     principal = loanPrincipal,
                                     months = loanMonths!!,
@@ -439,11 +392,11 @@ fun AddLoanScreen(
                                     mandatoryPaymentDay = null,
                                     gracePeriodEndDate = null,
                                     debtDueDate = null,
-                                    dayCountConvention = selectedConvention
+                                    // <<< ИЗМЕНЕНИЕ ЗДЕСЬ >>>
+                                    dayCountConvention = DayCountConvention.RETAIL
                                 )
                                 loanViewModel.addLoan(newLoan)
                             } else {
-                                // --- ИЗМЕНЕНИЕ ЗДЕСЬ (обновление существующего кредита) ---
                                 val updatedLoan = loan.copy(
                                     name = name,
                                     type = selectedType,
@@ -452,9 +405,8 @@ fun AddLoanScreen(
                                     monthlyPaymentDay = selectedPaymentDay,
                                     principal = loanPrincipal!!,
                                     months = loanMonths!!,
-                                    dayCountConvention = selectedConvention,
-                                    // Если у кредита уже есть initialPrincipal, сохраняем его.
-                                    // Если нет (это старый кредит), устанавливаем его в первый раз.
+                                    // <<< И ИЗМЕНЕНИЕ ЗДЕСЬ >>>
+                                    dayCountConvention = DayCountConvention.RETAIL,
                                     initialPrincipal = if (loan.initialPrincipal > 0.0) loan.initialPrincipal else loanPrincipal
                                 )
                                 loanViewModel.updateLoan(updatedLoan)
