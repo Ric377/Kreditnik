@@ -144,7 +144,6 @@ class MainActivity : ComponentActivity() {
 
     enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     Credits("credits", Icons.AutoMirrored.Filled.List, "Кредиты"),
-    Analytics("analytics", Icons.Filled.PieChart, "Аналитика"),
     Settings("settings", Icons.Filled.Settings, "Настройки")
 }
 
@@ -197,9 +196,7 @@ fun MainScreen(
                     navController = navController
                 )
             }
-            composable(BottomNavItem.Analytics.route) {
-                AnalyticsScreen()
-            }
+
             composable(BottomNavItem.Settings.route) {
                 SettingsScreen()
             }

@@ -2,6 +2,7 @@
 
 package com.kreditnik.app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,17 +19,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.kreditnik.app.R
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.SettingsViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
-import androidx.activity.compose.BackHandler
+import com.google.accompanist.pager.HorizontalPager
+import com.google.accompanist.pager.rememberPagerState
 
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
@@ -38,7 +42,7 @@ private fun Double.formatMoney(): String {
 
 @Composable
 private fun LoanRowContent(loan: Loan, currency: String) {
-    val totalAmountForDisplay = loan.principal + loan.accruedInterest // Вычисляем общую сумму к погашению для отображения
+    val totalAmountForDisplay = loan.principal + loan.accruedInterest
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -70,7 +74,6 @@ private fun LoanRowContent(loan: Loan, currency: String) {
             modifier = Modifier.weight(1f)
         )
 
-        // Изменено: отображаем totalAmountForDisplay вместо loan.principal
         Text(
             text = "${totalAmountForDisplay.formatMoney()} $currency",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -118,12 +121,17 @@ fun CreditsScreen(
     val currency by settingsViewModel.defaultCurrency.collectAsState()
     var selectedLoans by remember { mutableStateOf(setOf<Long>()) }
 
-    // Изменено: общая сумма теперь суммирует principal + accruedInterest по всем кредитам
     val total by remember(loans) {
         derivedStateOf {
             loans.sumOf { it.principal + it.accruedInterest }.formatMoney()
         }
     }
+
+    val context = LocalContext.current
+    val motivationalQuotes = remember {
+        context.resources.getStringArray(R.array.motivational_quotes).toList()
+    }
+    val pagerState = rememberPagerState(initialPage = 0)
 
     Scaffold(
         topBar = {
@@ -171,38 +179,78 @@ fun CreditsScreen(
         }
     ) { innerPadding ->
         BackHandler(enabled = selectedLoans.isNotEmpty()) {
-            selectedLoans = emptySet() // Сбросить выделение при нажатии "Назад"
+            selectedLoans = emptySet()
         }
-        LazyColumn(
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 0.dp, vertical = 8.dp),
-            contentPadding = PaddingValues()
         ) {
-            items(loans, key = { it.id }) { loan ->
-                LoanListItem(
-                    loan = loan,
-                    currency = currency,
-                    isSelected = loan.id in selectedLoans,
-                    onClick = {
-                        if (selectedLoans.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 0.dp, vertical = 8.dp),
+                contentPadding = PaddingValues()
+            ) {
+                items(loans, key = { it.id }) { loan ->
+                    LoanListItem(
+                        loan = loan,
+                        currency = currency,
+                        isSelected = loan.id in selectedLoans,
+                        onClick = {
+                            if (selectedLoans.isNotEmpty()) {
+                                selectedLoans = if (loan.id in selectedLoans)
+                                    selectedLoans - loan.id
+                                else
+                                    selectedLoans + loan.id
+                            } else {
+                                navController.navigate("loanDetail/${loan.id}")
+                            }
+                        },
+                        onLongClick = {
                             selectedLoans = if (loan.id in selectedLoans)
                                 selectedLoans - loan.id
                             else
                                 selectedLoans + loan.id
-                        } else {
-                            navController.navigate("loanDetail/${loan.id}")
                         }
-                    },
-                    onLongClick = {
-                        selectedLoans = if (loan.id in selectedLoans)
-                            selectedLoans - loan.id
-                        else
-                            selectedLoans + loan.id
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+
+            Divider()
+
+            Text(
+                text = "Совет на сегодня:",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            HorizontalPager(
+                count = motivationalQuotes.size,
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) { page ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp, horizontal = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = motivationalQuotes[page],
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                }
             }
         }
     }
