@@ -36,14 +36,4 @@ class Converters {
         }
     }
 
-    // OperationType converters
-    @TypeConverter
-    fun fromOperationType(value: OperationType?): String? {
-        return value?.name
-    }
-
-    @TypeConverter
-    fun toOperationType(value: String?): OperationType? {
-        return value?.let { OperationType.valueOf(it) }
-    }
 }

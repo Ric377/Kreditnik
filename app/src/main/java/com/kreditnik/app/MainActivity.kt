@@ -94,8 +94,6 @@ class MainActivity : ComponentActivity() {
                     factory = LoanViewModelFactory(
                         LoanRepository(
                             loanDao = DatabaseProvider.getDatabase(applicationContext).loanDao(),
-                            operationDao = DatabaseProvider.getDatabase(applicationContext)
-                                .operationDao()
                         )
                     )
                 )
