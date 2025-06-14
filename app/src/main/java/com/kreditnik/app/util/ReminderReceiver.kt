@@ -13,6 +13,7 @@ import com.kreditnik.app.R
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        WakeLockHelper.acquireTemporaryWakeLock(context)
         val loanName = intent.getStringExtra("loanName") ?: return
         val loanId = intent.getLongExtra("loanId", 0L)
         val monthlyPayment = intent.getDoubleExtra("monthlyPayment", 0.0)
