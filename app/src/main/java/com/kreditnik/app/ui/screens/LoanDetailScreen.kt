@@ -40,6 +40,13 @@ import android.content.Context
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+
 
 
 
@@ -222,6 +229,7 @@ fun LoanDetailScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
+                //Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -232,103 +240,94 @@ fun LoanDetailScreen(
 
                     val context = LocalContext.current
                     val activity = context as? Activity
-                    var requested by remember { mutableStateOf(false) }
-                    var enableSwitch by remember { mutableStateOf(loan.reminderEnabled) }
+                    val alarmManager = remember {
+                        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    }
+                    var switchState by remember { mutableStateOf(loan.reminderEnabled) }
+                    var flowStarted by remember { mutableStateOf(false) }
 
-                    LaunchedEffect(requested) {
-                        if (enableSwitch && requested) {
-                            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                            val postNotiGranted = ContextCompat.checkSelfPermission(
-                                context, Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
-                            val alarmGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                alarmManager.canScheduleExactAlarms()
-                            } else true
+                    val lifecycleOwner = LocalLifecycleOwner.current
+                    DisposableEffect(flowStarted) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME && flowStarted) {
+                                val postOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                } else true
+                                val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    alarmManager.canScheduleExactAlarms()
+                                } else true
 
-                            if (!postNotiGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                ActivityCompat.requestPermissions(
-                                    activity ?: return@LaunchedEffect,
-                                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                                    1001
-                                )
-                            } else if (!alarmGranted) {
+                                if (postOk && alarmOk) {
+                                    flowStarted = false
+                                    switchState = true
+                                    loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
+                                    NotificationHelper.scheduleLoanReminder(context, loan)
+                                    Toast.makeText(
+                                        context,
+                                        "Уведомление установлено на 12:00 за день до платежа",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                    }
+
+                    val requestPostLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { granted ->
+                        if (granted) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                                !alarmManager.canScheduleExactAlarms()
+                            ) {
                                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                                     data = android.net.Uri.parse("package:${context.packageName}")
                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                 }
                                 context.startActivity(intent)
                             }
-
-                            // Заново проверим, получены ли оба разрешения
-                            val grantedNow = (ContextCompat.checkSelfPermission(
-                                context, Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED) &&
-                                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        alarmManager.canScheduleExactAlarms()
-                                    } else true)
-
-                            if (grantedNow) {
-                                enableSwitch = true
-                                loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
-                                NotificationHelper.scheduleLoanReminder(context, loan)
-                                Toast.makeText(
-                                    context,
-                                    "Уведомление установлено на 12:00 за день до платежа",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
+                        } else {
+                            flowStarted = false
+                            switchState = false
+                            Toast.makeText(
+                                context,
+                                "Разрешения не даны. Напоминание не включено.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
 
-
-                    val scope = rememberCoroutineScope()
-
                     Switch(
-                        checked = enableSwitch,
-                        onCheckedChange = {
-                            enableSwitch = it
-                            if (it) {
-                                scope.launch {
-                                    val postNotiGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.POST_NOTIFICATIONS
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    } else true
+                        checked = switchState,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                flowStarted = true
+                                val postOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                } else true
+                                val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    alarmManager.canScheduleExactAlarms()
+                                } else true
 
-                                    if (!postNotiGranted) {
-                                        ActivityCompat.requestPermissions(
-                                            activity ?: return@launch,
-                                            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                                            1001
-                                        )
-                                        delay(500) // ждём, чтобы система успела обработать
+                                when {
+                                    !postOk -> {
+                                        requestPostLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
-
-                                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                                    val alarmGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        alarmManager.canScheduleExactAlarms()
-                                    } else true
-
-                                    if (!alarmGranted) {
+                                    !alarmOk -> {
                                         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                                             data = android.net.Uri.parse("package:${context.packageName}")
                                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                         }
                                         context.startActivity(intent)
-                                        delay(500) // снова небольшая пауза
                                     }
-
-                                    val postNotiGrantedNow = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.POST_NOTIFICATIONS
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    } else true
-
-                                    val alarmGrantedNow = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        alarmManager.canScheduleExactAlarms()
-                                    } else true
-
-                                    if (postNotiGrantedNow && alarmGrantedNow) {
+                                    else -> {
+                                        flowStarted = false
+                                        switchState = true
                                         loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
                                         NotificationHelper.scheduleLoanReminder(context, loan)
                                         Toast.makeText(
@@ -336,32 +335,26 @@ fun LoanDetailScreen(
                                             "Уведомление установлено на 12:00 за день до платежа",
                                             Toast.LENGTH_LONG
                                         ).show()
-                                    } else {
-                                        enableSwitch = false
-                                        Toast.makeText(
-                                            context,
-                                            "Разрешения не даны. Напоминание не включено.",
-                                            Toast.LENGTH_LONG
-                                        ).show()
                                     }
                                 }
                             } else {
+                                flowStarted = false
+                                switchState = false
                                 loanViewModel.updateLoan(loan.copy(reminderEnabled = false))
                                 NotificationHelper.cancelLoanReminder(context, loan)
                                 Toast.makeText(context, "Уведомление отменено", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
-
-
-
-
-
-
-
-
-
                 }
+
+
+
+
+
+
+
+
             }
 
         }
