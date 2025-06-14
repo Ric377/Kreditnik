@@ -14,6 +14,10 @@ import com.kreditnik.app.R
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         WakeLockHelper.acquireTemporaryWakeLock(context)
+        //тест
+        android.util.Log.d("ReminderTest", "📩 onReceive вызван")
+
+
         val loanName = intent.getStringExtra("loanName") ?: return
         val loanId = intent.getLongExtra("loanId", 0L)
         val monthlyPayment = intent.getDoubleExtra("monthlyPayment", 0.0)
@@ -32,6 +36,10 @@ class ReminderReceiver : BroadcastReceiver() {
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
+                //тест
+                android.util.Log.d("ReminderTest", "🔔 Показ уведомления: \"$loanName\", $formattedPayment ₽")
+
+
                 NotificationManagerCompat.from(context).notify(loanId.toInt(), builder.build())
             }
         } catch (e: SecurityException) {

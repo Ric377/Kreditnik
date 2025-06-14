@@ -12,6 +12,10 @@ import kotlinx.coroutines.launch
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            //тест
+            android.util.Log.d("ReminderTest", "🔄 BootReceiver запущен")
+
+
             CoroutineScope(Dispatchers.IO).launch {
                 val dao = DatabaseProvider.getDatabase(context).loanDao()
                 val loans = dao.getAllLoans()

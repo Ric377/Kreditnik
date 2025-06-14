@@ -41,6 +41,11 @@ object NotificationHelper {
 
         val reminderTime = calculateReminderTime(loan)
 
+        //ТЕСТ
+        val sdf = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm")
+        android.util.Log.d("ReminderTest", "⏰ Устанавливаем уведомление на ${sdf.format(java.util.Date(reminderTime))}")
+        //КОНЕЦ ТЕСТА
+
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(
