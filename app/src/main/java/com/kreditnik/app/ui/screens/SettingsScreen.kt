@@ -22,15 +22,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kreditnik.app.viewmodel.SettingsViewModel
+import androidx.compose.ui.platform.LocalContext
+
+
 
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
 
+    val context = LocalContext.current
+
     var currencyMenuExpanded by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+
+
 
     val density = LocalDensity.current
 
@@ -234,12 +241,16 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             onDismissRequest = { showPrivacyPolicyDialog = false },
             title = { Text("Политика конфиденциальности") },
             text = {
+                // читаем файл assets/privacy_policy_ru.md один раз
+                val policyText by remember {
+                    mutableStateOf(
+                        context.assets.open("privacy_policy_ru.md")
+                            .bufferedReader()
+                            .use { it.readText() }
+                    )
+                }
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("Дата вступления в силу: 13 Июня 2025")
-                    Spacer(Modifier.height(8.dp))
-                    Text("Ваши данные хранятся только на устройстве и не передаются третьим лицам.")
-                    Spacer(Modifier.height(8.dp))
-                    Text("Контакт: ric.ch@yandex.ru")
+                    Text(policyText)
                 }
             },
             confirmButton = {
