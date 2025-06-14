@@ -51,7 +51,7 @@ object NotificationHelper {
 
                 Toast.makeText(
                     context,
-                    "Напоминание установлено на ${loan.name} за день до платежа в 12:00.",
+                    "Напоминание установлено",
                     Toast.LENGTH_SHORT
                 ).show()
             } else {
@@ -86,7 +86,7 @@ object NotificationHelper {
 
         Toast.makeText(
             context,
-            "Напоминание отменено для ${loan.name}.",
+            "Напоминание отменено",
             Toast.LENGTH_SHORT
         ).show()
     }

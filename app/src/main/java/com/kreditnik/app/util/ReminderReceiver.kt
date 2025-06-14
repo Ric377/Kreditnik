@@ -11,7 +11,6 @@ import androidx.core.app.NotificationManagerCompat
 import kotlin.math.roundToInt
 import com.kreditnik.app.R
 
-
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val loanName = intent.getStringExtra("loanName") ?: return
@@ -22,7 +21,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, "loan_channel")
             .setSmallIcon(R.drawable.ic_notification)
-            .setSmallIcon(com.kreditnik.app.R.drawable.ic_notification)
+            .setContentTitle("Напоминание о платеже")
             .setContentText("Завтра платёж по \"$loanName\" на $formattedPayment ₽.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
@@ -36,7 +35,6 @@ class ReminderReceiver : BroadcastReceiver() {
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
-            // При желании можно логировать или сообщить об ошибке
         }
     }
 }
