@@ -10,10 +10,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.navigation.NavController
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.SettingsViewModel
+import com.kreditnik.app.util.NotificationHelper
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.time.format.DateTimeFormatter
@@ -117,10 +122,12 @@ fun LoanDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
                 .padding(horizontal = 0.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        )
+        {
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -184,6 +191,41 @@ fun LoanDetailScreen(
                     Text("Погасить", maxLines = 1)
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val context = LocalContext.current
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Напоминание о платеже", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = loan.reminderEnabled,
+                        onCheckedChange = { isChecked ->
+                            loanViewModel.updateLoan(loan.copy(reminderEnabled = isChecked))
+                            if (isChecked) {
+                                NotificationHelper.scheduleLoanReminder(context, loan)
+                            } else {
+                                NotificationHelper.cancelLoanReminder(context, loan)
+                            }
+                        }
+                    )
+                }
+            }
+
         }
     }
 

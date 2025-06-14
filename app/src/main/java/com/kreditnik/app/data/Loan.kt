@@ -15,6 +15,8 @@ data class Loan(
     val interestRate: Double,
     val startDate: LocalDate,
     val monthlyPaymentDay: Int,         // День месяца платежа для кредитов
+    val reminderEnabled: Boolean = false,
+
 
     /**
      * Изначальная сумма кредита. Не меняется.

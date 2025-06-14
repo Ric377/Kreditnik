@@ -3,21 +3,21 @@ package com.kreditnik.app
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.AlarmManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,34 +40,30 @@ import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
+import com.kreditnik.app.data.LoanType
+import com.kreditnik.app.data.Loan
+import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            sendNotification()
-        }
-    }
+    ) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
+        requestExactAlarmPermissionIfNeeded()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
+                ) != PackageManager.PERMISSION_GRANTED
             ) {
-//                sendNotification()
-            } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        } else {
-//            sendNotification()
         }
 
         val splashScreen = installSplashScreen()
@@ -98,7 +94,45 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
+                // === НАЧАЛО: автосоздание тестового кредита ===
+                LaunchedEffect(Unit) {
+                    val existingLoans = loanViewModel.loans.value
+                    if (existingLoans.isEmpty()) {
+                        loanViewModel.addLoan(
+                            com.kreditnik.app.data.Loan(
+                                name = "Тестовый кредит",
+                                type = LoanType.CREDIT,
+                                principal = 10000.0,
+                                accruedInterest = 500.0,
+                                initialPrincipal = 10000.0,
+                                interestRate = 10.0,
+                                months = 12,
+                                startDate = LocalDate.now().minusMonths(1),
+                                monthlyPaymentDay = 15,
+                                reminderEnabled = true,
+                                logo = "",
+                                gracePeriodDays = 0,
+                                mandatoryPaymentDay = 0,
+                                gracePeriodEndDate = null,
+                                debtDueDate = null
+                            )
+                        )
+                    }
+                }
+                // === КОНЕЦ: автосоздание тестового кредита ===
+
                 MainScreen(loanViewModel, settingsViewModel)
+            }
+        }
+    }
+
+    private fun requestExactAlarmPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                intent.data = android.net.Uri.parse("package:$packageName")
+                startActivity(intent)
             }
         }
     }
@@ -118,18 +152,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun sendNotification() {
-        // Проверка разрешения перед отправкой уведомления
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Разрешение не дано, просто выходим, не крашимся
-            return
-        }
+        ) return
 
         val builder = NotificationCompat.Builder(this, "loan_channel")
-            .setSmallIcon(R.drawable.ic_notification) // замени на свою иконку
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Напоминание о платеже")
             .setContentText("Завтра платёж по кредиту на 8000 ₽.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -140,7 +170,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-    enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
+enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     Credits("credits", Icons.AutoMirrored.Filled.List, "Кредиты"),
     Settings("settings", Icons.Filled.Settings, "Настройки")
 }
@@ -198,9 +228,11 @@ fun MainScreen(
             composable(BottomNavItem.Settings.route) {
                 SettingsScreen()
             }
+
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
             }
+
             composable(
                 route = "editLoan/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.LongType })
@@ -211,6 +243,7 @@ fun MainScreen(
                     AddLoanScreen(loanViewModel, navController, editLoan)
                 }
             }
+
             composable(
                 route = "loanDetail/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.IntType })
