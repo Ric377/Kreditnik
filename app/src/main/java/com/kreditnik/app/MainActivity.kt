@@ -90,9 +90,11 @@ class MainActivity : ComponentActivity() {
                     factory = LoanViewModelFactory(
                         LoanRepository(
                             loanDao = DatabaseProvider.getDatabase(applicationContext).loanDao(),
-                        )
+                        ),
+                        applicationContext
                     )
                 )
+
 
                 // === НАЧАЛО: автосоздание тестового кредита ===
                 LaunchedEffect(Unit) {

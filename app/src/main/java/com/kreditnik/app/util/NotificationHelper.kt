@@ -40,6 +40,11 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        alarmManager.cancel(pendingIntent) // ← ✅ отменяем старую
+
+
+
+
         val reminderTime = calculateReminderTime(loan)
         val now = System.currentTimeMillis()
 

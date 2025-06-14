@@ -10,9 +10,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import android.util.Log // Важно для отладки
+import android.util.Log
+import android.content.Context
+import com.kreditnik.app.util.NotificationHelper
 
-class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
+
+class LoanViewModel(
+    private val repository: LoanRepository,
+    private val appContext: Context
+) : ViewModel() {
+
 
     private val _loans = MutableStateFlow<List<Loan>>(emptyList())
     val loans: StateFlow<List<Loan>> get() = _loans
@@ -42,7 +49,13 @@ class LoanViewModel(private val repository: LoanRepository) : ViewModel() {
     fun updateLoan(loan: Loan) = viewModelScope.launch {
         repository.updateLoan(loan)
         loadLoans()
+
+        if (loan.reminderEnabled) {
+            NotificationHelper.scheduleLoanReminder(appContext, loan)
+        }
     }
+
+
 
     fun deleteLoan(loan: Loan) = viewModelScope.launch {
         repository.deleteLoan(loan)
