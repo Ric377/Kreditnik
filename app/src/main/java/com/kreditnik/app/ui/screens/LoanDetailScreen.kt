@@ -227,19 +227,6 @@ fun LoanDetailScreen(
                             }
                         }
                     )
-                    Button(
-                        onClick = {
-                            NotificationHelper.scheduleTestReminder(context, loan)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Notifications, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Проверить уведомление")
-                    }
 
                 }
             }
