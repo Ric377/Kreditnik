@@ -46,6 +46,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+
 
 
 
@@ -239,44 +242,38 @@ fun LoanDetailScreen(
                     Text("Напоминание о платеже", modifier = Modifier.weight(1f))
 
                     val context = LocalContext.current
-                    val activity = context as? Activity
                     val alarmManager = remember {
                         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
                     }
                     var switchState by remember { mutableStateOf(loan.reminderEnabled) }
-                    var flowStarted by remember { mutableStateOf(false) }
 
-                    val lifecycleOwner = LocalLifecycleOwner.current
-                    DisposableEffect(flowStarted) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_RESUME && flowStarted) {
-                                val postOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.POST_NOTIFICATIONS
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                } else true
-                                val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                    alarmManager.canScheduleExactAlarms()
-                                } else true
-
-                                if (postOk && alarmOk) {
-                                    flowStarted = false
-                                    switchState = true
-                                    loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
-                                    NotificationHelper.scheduleLoanReminder(context, loan)
-                                    Toast.makeText(
-                                        context,
-                                        "Уведомление установлено на 12:00 за день до платежа",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
+                    // ── launchers ──────────────────────────────────────────────────────────────
+                    val exactAlarmLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.StartActivityForResult()
+                    ) {
+                        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            alarmManager.canScheduleExactAlarms()
+                        } else true
+                        if (ok) {
+                            switchState = true
+                            loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
+                            NotificationHelper.scheduleLoanReminder(context, loan)
+                            Toast.makeText(
+                                context,
+                                "Уведомление установлено на 12:00 за день до платежа",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            switchState = false
+                            Toast.makeText(
+                                context,
+                                "Разрешение на точные уведомления не дано.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                     }
 
-                    val requestPostLauncher = rememberLauncherForActivityResult(
+                    val postNotiLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestPermission()
                     ) { granted ->
                         if (granted) {
@@ -284,49 +281,53 @@ fun LoanDetailScreen(
                                 !alarmManager.canScheduleExactAlarms()
                             ) {
                                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                    data = android.net.Uri.parse("package:${context.packageName}")
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    data = Uri.parse("package:${context.packageName}")
                                 }
-                                context.startActivity(intent)
+                                exactAlarmLauncher.launch(intent)
+                            } else {
+                                switchState = true
+                                loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
+                                NotificationHelper.scheduleLoanReminder(context, loan)
+                                Toast.makeText(
+                                    context,
+                                    "Уведомление установлено на 12:00 за день до платежа",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         } else {
-                            flowStarted = false
                             switchState = false
                             Toast.makeText(
                                 context,
-                                "Разрешения не даны. Напоминание не включено.",
+                                "Разрешение на уведомления не дано.",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
                     }
 
+                    // ── переключатель ─────────────────────────────────────────────────────────
                     Switch(
                         checked = switchState,
                         onCheckedChange = { checked ->
                             if (checked) {
-                                flowStarted = true
                                 val postOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     ContextCompat.checkSelfPermission(
                                         context, Manifest.permission.POST_NOTIFICATIONS
                                     ) == PackageManager.PERMISSION_GRANTED
                                 } else true
+
                                 val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                     alarmManager.canScheduleExactAlarms()
                                 } else true
 
                                 when {
-                                    !postOk -> {
-                                        requestPostLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
+                                    !postOk -> postNotiLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     !alarmOk -> {
                                         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                            data = android.net.Uri.parse("package:${context.packageName}")
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            data = Uri.parse("package:${context.packageName}")
                                         }
-                                        context.startActivity(intent)
+                                        exactAlarmLauncher.launch(intent)
                                     }
                                     else -> {
-                                        flowStarted = false
                                         switchState = true
                                         loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
                                         NotificationHelper.scheduleLoanReminder(context, loan)
@@ -338,7 +339,6 @@ fun LoanDetailScreen(
                                     }
                                 }
                             } else {
-                                flowStarted = false
                                 switchState = false
                                 loanViewModel.updateLoan(loan.copy(reminderEnabled = false))
                                 NotificationHelper.cancelLoanReminder(context, loan)
@@ -347,6 +347,7 @@ fun LoanDetailScreen(
                         }
                     )
                 }
+
 
 
 
