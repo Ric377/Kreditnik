@@ -54,17 +54,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
-        requestExactAlarmPermissionIfNeeded()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
 
         val splashScreen = installSplashScreen()
         splashScreen.setOnExitAnimationListener { provider ->
@@ -111,7 +100,7 @@ class MainActivity : ComponentActivity() {
                                 months = 12,
                                 startDate = LocalDate.now().minusMonths(1),
                                 monthlyPaymentDay = 15,
-                                reminderEnabled = true,
+                                reminderEnabled = false,
                                 logo = "",
                                 gracePeriodDays = 0,
                                 mandatoryPaymentDay = 0,
