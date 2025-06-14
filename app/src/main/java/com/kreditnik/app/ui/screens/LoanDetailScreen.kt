@@ -233,14 +233,16 @@ fun LoanDetailScreen(
                     }
                     var switchState by remember { mutableStateOf(loan.reminderEnabled) }
 
-                    // ── launchers ──────────────────────────────────────────────────────────────
-                    val exactAlarmLauncher = rememberLauncherForActivityResult(
-                        ActivityResultContracts.StartActivityForResult()
-                    ) {
-                        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            alarmManager.canScheduleExactAlarms()
-                        } else true
-                        if (ok) {
+                    // ── Toast helper (только для ошибок) ──────────────────────────────────────
+                    var currentToast by remember { mutableStateOf<Toast?>(null) }
+                    fun showError(msg: String) {
+                        currentToast?.cancel()
+                        currentToast = Toast.makeText(context, msg, Toast.LENGTH_LONG).also { it.show() }
+                    }
+
+                    // ── включить / выключить без дублирования ────────────────────────────────
+                    fun enableReminder() {
+                        if (!switchState) {
                             switchState = true
                             loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
                             NotificationHelper.scheduleLoanReminder(context, loan)
@@ -249,48 +251,54 @@ fun LoanDetailScreen(
                                 "Уведомление установлено на 12:00 за день до платежа",
                                 Toast.LENGTH_LONG
                             ).show()
-                        } else {
+                        }
+                    }
+
+                    fun disableReminder() {
+                        if (switchState) {
                             switchState = false
+                            loanViewModel.updateLoan(loan.copy(reminderEnabled = false))
+                            NotificationHelper.cancelLoanReminder(context, loan)
                             Toast.makeText(
                                 context,
-                                "Разрешение на точные уведомления не дано.",
-                                Toast.LENGTH_LONG
+                                "Уведомление отменено",
+                                Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
 
-                    val postNotiLauncher = rememberLauncherForActivityResult(
+
+                    // ── launchers ────────────────────────────────────────────────────────────
+                    val alarmPermLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.StartActivityForResult()
+                    ) {
+                        val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            alarmManager.canScheduleExactAlarms()
+                        } else true
+                        if (alarmOk) enableReminder() else showError("Разрешение на точные уведомления не дано")
+                    }
+
+                    val postNotifLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestPermission()
                     ) { granted ->
-                        if (granted) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                                !alarmManager.canScheduleExactAlarms()
-                            ) {
-                                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                                exactAlarmLauncher.launch(intent)
-                            } else {
-                                switchState = true
-                                loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
-                                NotificationHelper.scheduleLoanReminder(context, loan)
-                                Toast.makeText(
-                                    context,
-                                    "Уведомление установлено на 12:00 за день до платежа",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
+                        if (!granted) {
+                            showError("Разрешение на уведомления не дано")
+                            return@rememberLauncherForActivityResult
+                        }
+                        val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            alarmManager.canScheduleExactAlarms()
+                        } else true
+                        if (alarmOk) {
+                            enableReminder()
                         } else {
-                            switchState = false
-                            Toast.makeText(
-                                context,
-                                "Разрешение на уведомления не дано.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                            }
+                            alarmPermLauncher.launch(intent)
                         }
                     }
 
-                    // ── переключатель ─────────────────────────────────────────────────────────
+                    // ── сам переключатель ────────────────────────────────────────────────────
                     Switch(
                         checked = switchState,
                         onCheckedChange = { checked ->
@@ -300,42 +308,26 @@ fun LoanDetailScreen(
                                         context, Manifest.permission.POST_NOTIFICATIONS
                                     ) == PackageManager.PERMISSION_GRANTED
                                 } else true
-
                                 val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                     alarmManager.canScheduleExactAlarms()
                                 } else true
-
                                 when {
-                                    !postOk -> postNotiLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    !postOk ->
+                                        postNotifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     !alarmOk -> {
                                         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                                             data = Uri.parse("package:${context.packageName}")
                                         }
-                                        exactAlarmLauncher.launch(intent)
+                                        alarmPermLauncher.launch(intent)
                                     }
-                                    else -> {
-                                        switchState = true
-                                        loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
-                                        NotificationHelper.scheduleLoanReminder(context, loan)
-                                        Toast.makeText(
-                                            context,
-                                            "Уведомление установлено на 12:00 за день до платежа",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
+                                    else -> enableReminder()
                                 }
                             } else {
-                                switchState = false
-                                loanViewModel.updateLoan(loan.copy(reminderEnabled = false))
-                                NotificationHelper.cancelLoanReminder(context, loan)
-                                Toast.makeText(context, "Уведомление отменено", Toast.LENGTH_SHORT).show()
+                                disableReminder()
                             }
                         }
                     )
                 }
-
-
-
 
 
 

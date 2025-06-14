@@ -76,11 +76,6 @@ object NotificationHelper {
                     pendingIntent
                 )
 
-                Toast.makeText(
-                    context,
-                    "Напоминание установлено",
-                    Toast.LENGTH_SHORT
-                ).show()
             } else {
                 Toast.makeText(
                     context,
@@ -111,11 +106,6 @@ object NotificationHelper {
 
         alarmManager.cancel(pendingIntent)
 
-        Toast.makeText(
-            context,
-            "Напоминание отменено",
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     private fun calculateReminderTime(loan: Loan): Long {
