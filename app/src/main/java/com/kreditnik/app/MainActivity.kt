@@ -41,7 +41,6 @@ import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
 import com.kreditnik.app.data.LoanType
-import com.kreditnik.app.data.Loan
 import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {

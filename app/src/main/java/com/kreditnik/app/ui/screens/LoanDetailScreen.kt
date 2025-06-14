@@ -28,30 +28,16 @@ import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 import android.widget.Toast
 import android.Manifest
-import android.app.Activity
 import android.app.AlarmManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.Context
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-
-
-
-
 
 
 @OptIn(ExperimentalMaterial3Api::class)

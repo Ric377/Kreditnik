@@ -4,7 +4,6 @@ package com.kreditnik.app.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDate
-import com.kreditnik.app.data.DayCountConvention
 
 @Entity(tableName = "loans")
 data class Loan(
