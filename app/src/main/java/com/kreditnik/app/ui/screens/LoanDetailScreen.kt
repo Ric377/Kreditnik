@@ -26,6 +26,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import java.util.*
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import android.widget.Toast
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,11 +220,27 @@ fun LoanDetailScreen(
                             loanViewModel.updateLoan(loan.copy(reminderEnabled = isChecked))
                             if (isChecked) {
                                 NotificationHelper.scheduleLoanReminder(context, loan)
+                                Toast.makeText(context, "Уведомление установлено на 12:00 за день до платежа", Toast.LENGTH_LONG).show()
                             } else {
                                 NotificationHelper.cancelLoanReminder(context, loan)
+                                Toast.makeText(context, "Уведомление отменено", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
+                    Button(
+                        onClick = {
+                            NotificationHelper.scheduleTestReminder(context, loan)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Проверить уведомление")
+                    }
+
                 }
             }
 

@@ -8,6 +8,7 @@ import android.os.Build
 import android.widget.Toast
 import com.kreditnik.app.data.Loan
 import com.kreditnik.app.util.ReminderReceiver
+import android.util.Log
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -40,6 +41,22 @@ object NotificationHelper {
         )
 
         val reminderTime = calculateReminderTime(loan)
+        val now = System.currentTimeMillis()
+
+        val paymentDay = reminderTime + 24 * 60 * 60 * 1000L // 12:00 следующего дня
+        val latestAllowedTime = paymentDay - 60_000 // 23:59:00
+
+        val finalReminderTime = if (now in reminderTime..latestAllowedTime) {
+            Log.d("ReminderTest", "🟡 Системное время попадает в диапазон 12:00 до 23:59 — срабатываем немедленно")
+            now + 5_000 // через 5 секунд
+        } else {
+            reminderTime
+        }
+
+        Log.d("ReminderTest", "🔧 Reminder будет установлен на: " +
+                java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(java.util.Date(finalReminderTime))
+        )
+
 
         //ТЕСТ
         val sdf = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm")
@@ -50,7 +67,7 @@ object NotificationHelper {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    reminderTime,
+                    finalReminderTime,
                     pendingIntent
                 )
 
@@ -117,4 +134,39 @@ object NotificationHelper {
             .toInstant()
             .toEpochMilli()
     }
+
+    fun scheduleTestReminder(context: Context, loan: Loan) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra("loanName", loan.name)
+            putExtra("loanId", loan.id)
+            val monthlyRate = (loan.interestRate / 100) / 12
+            val monthlyPayment = if (monthlyRate == 0.0) {
+                loan.initialPrincipal / loan.months
+            } else {
+                loan.initialPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, loan.months.toDouble())) /
+                        (Math.pow(1 + monthlyRate, loan.months.toDouble()) - 1)
+            }
+            putExtra("monthlyPayment", monthlyPayment)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            loan.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val timeInMillis = System.currentTimeMillis() + 60 * 1000 // через 1 минуту
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            timeInMillis,
+            pendingIntent
+        )
+
+        Toast.makeText(context, "Тестовое уведомление через 1 минуту", Toast.LENGTH_SHORT).show()
+    }
+
 }

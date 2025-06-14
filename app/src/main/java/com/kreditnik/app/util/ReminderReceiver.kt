@@ -10,6 +10,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlin.math.roundToInt
 import com.kreditnik.app.R
+import android.app.PendingIntent
+
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -24,11 +26,24 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val formattedPayment = (monthlyPayment * 100).roundToInt() / 100.0
 
+        val intentToOpenApp = Intent(context, com.kreditnik.app.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            loanId.toInt(),
+            intentToOpenApp,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = NotificationCompat.Builder(context, "loan_channel")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Напоминание о платеже")
             .setContentText("Завтра платёж по \"$loanName\" на $formattedPayment ₽.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
 
         try {
             if (ActivityCompat.checkSelfPermission(
