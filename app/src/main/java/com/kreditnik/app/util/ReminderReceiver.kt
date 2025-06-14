@@ -1,26 +1,42 @@
 package com.kreditnik.app.util
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import kotlin.math.roundToInt
 import com.kreditnik.app.R
+
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val loanName = intent.getStringExtra("loanName") ?: "Кредит"
-        val loanId = intent.getLongExtra("loanId", 0)
+        val loanName = intent.getStringExtra("loanName") ?: return
+        val loanId = intent.getLongExtra("loanId", 0L)
+        val monthlyPayment = intent.getDoubleExtra("monthlyPayment", 0.0)
 
-        val notification = NotificationCompat.Builder(context, "loan_channel")
-            .setSmallIcon(R.drawable.ic_notification) // добавь свою иконку в res/drawable
-            .setContentTitle("Завтра платёж по кредиту")
-            .setContentText("Кредит: $loanName")
+        val formattedPayment = (monthlyPayment * 100).roundToInt() / 100.0
+
+        val builder = NotificationCompat.Builder(context, "loan_channel")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(com.kreditnik.app.R.drawable.ic_notification)
+            .setContentText("Завтра платёж по \"$loanName\" на $formattedPayment ₽.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
 
-        with(NotificationManagerCompat.from(context)) {
-            notify(1000 + loanId.toInt(), notification)
+        try {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                NotificationManagerCompat.from(context).notify(loanId.toInt(), builder.build())
+            }
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+            // При желании можно логировать или сообщить об ошибке
         }
     }
 }

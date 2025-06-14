@@ -151,23 +151,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun sendNotification() {
+    private fun sendNotification(loanViewModel: LoanViewModel) {
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) return
 
+        val loan = loanViewModel.loans.value.firstOrNull() ?: return
+
+        val total = loan.initialPrincipal / loan.months + loan.accruedInterest / loan.months
+        val paymentText = "Завтра платёж по кредиту «${loan.name}» на сумму ${"%.2f".format(total)} ₽."
+
+
         val builder = NotificationCompat.Builder(this, "loan_channel")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Напоминание о платеже")
-            .setContentText("Завтра платёж по кредиту на 8000 ₽.")
+            .setContentText(paymentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         with(NotificationManagerCompat.from(this)) {
             notify(1001, builder.build())
         }
     }
+
 }
 
 enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
