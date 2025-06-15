@@ -380,58 +380,57 @@ fun AddLoanScreen(
                     if (!hasError) {
                         scope.launch {
                             if (loan == null) {
-                                val reminderDaysBefore = settingsVM.reminderDaysBefore.value
-                                val reminderTime = settingsVM.reminderTime.value
-
+                                // ── СОЗДАЁМ новый кредит ──
                                 val newLoan = Loan(
-                                    name = name,
-                                    type = selectedType,
-                                    logo = "",
-                                    interestRate = loanInterestRate!!,
-                                    startDate = selectedDate,
+                                    name              = name,
+                                    type              = selectedType,
+                                    logo              = "",
+                                    interestRate      = loanInterestRate!!,
+                                    startDate         = selectedDate,
                                     monthlyPaymentDay = selectedPaymentDay,
-                                    initialPrincipal = loanPrincipal!!,
-                                    principal = loanPrincipal,
-                                    months = loanMonths!!,
-                                    gracePeriodDays = null,
+                                    initialPrincipal  = loanPrincipal!!,
+                                    principal         = loanPrincipal,
+                                    months            = loanMonths!!,
+                                    gracePeriodDays   = null,
                                     mandatoryPaymentDay = null,
-                                    gracePeriodEndDate = null,
-                                    debtDueDate = null,
-                                    dayCountConvention = DayCountConvention.RETAIL,
-                                    reminderDaysBefore = reminderDaysBefore,
-                                    reminderTime = reminderTime
+                                    gracePeriodEndDate  = null,
+                                    debtDueDate         = null,
+                                    dayCountConvention  = DayCountConvention.RETAIL,
+                                    // при создании берём актуальные настройки
+                                    reminderDaysBefore  = settingsVM.reminderDaysBefore.value,
+                                    reminderTime        = settingsVM.reminderTime.value
                                 )
-
                                 loanViewModel.addLoan(newLoan)
+
                             } else {
-                                val reminderEnabledNow = loan.reminderEnabled
-
+                                // ── РЕДАКТИРУЕМ существующий кредит ──
                                 val updatedLoan = loan.copy(
-                                    name = name,
-                                    type = selectedType,
-                                    logo = loan.logo,
-                                    interestRate = loanInterestRate!!,
-                                    startDate = selectedDate,
+                                    name              = name,
+                                    type              = selectedType,
+                                    logo              = loan.logo,
+                                    interestRate      = loanInterestRate!!,
+                                    startDate         = selectedDate,
                                     monthlyPaymentDay = selectedPaymentDay,
-                                    initialPrincipal = loanPrincipal!!,
-                                    principal = loan.principal,
-                                    months = loanMonths!!,
-                                    accruedInterest = loan.accruedInterest,
+                                    initialPrincipal  = loanPrincipal!!,
+                                    principal         = loan.principal,
+                                    months            = loanMonths!!,
+                                    accruedInterest   = loan.accruedInterest,
                                     lastInterestCalculationDate = loan.lastInterestCalculationDate,
-                                    dayCountConvention = DayCountConvention.RETAIL,
-                                    gracePeriodDays = loan.gracePeriodDays,
+                                    dayCountConvention  = DayCountConvention.RETAIL,
+                                    gracePeriodDays     = loan.gracePeriodDays,
                                     mandatoryPaymentDay = loan.mandatoryPaymentDay,
-                                    gracePeriodEndDate = loan.gracePeriodEndDate,
-                                    debtDueDate = loan.debtDueDate,
-                                    reminderDaysBefore = if (reminderEnabledNow) settingsVM.reminderDaysBefore.value else null,
-                                    reminderTime = if (reminderEnabledNow) settingsVM.reminderTime.value else null
+                                    gracePeriodEndDate  = loan.gracePeriodEndDate,
+                                    debtDueDate         = loan.debtDueDate,
+                                    // ⚠️ НЕ меняем уже сохранённые параметры напоминания
+                                    reminderDaysBefore  = loan.reminderDaysBefore,
+                                    reminderTime        = loan.reminderTime
                                 )
-
                                 loanViewModel.updateLoan(updatedLoan)
                             }
                             navController.popBackStack()
                         }
                     }
+
                 },
                 modifier = Modifier
                     .fillMaxWidth()
