@@ -21,6 +21,24 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     val availableCurrencies = listOf("$", "€", "£", "₽", "¥", "₾")
 
+    val reminderDaysBefore = settingsDataStore.reminderDaysBeforeFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 1)
+
+    val reminderTime = settingsDataStore.reminderTimeFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "12:00")
+
+    fun setReminderDaysBefore(days: Int) {
+        viewModelScope.launch {
+            settingsDataStore.setReminderDaysBefore(days)
+        }
+    }
+
+    fun setReminderTime(time: String) {
+        viewModelScope.launch {
+            settingsDataStore.setReminderTime(time)
+        }
+    }
+
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataStore.setDarkMode(enabled)

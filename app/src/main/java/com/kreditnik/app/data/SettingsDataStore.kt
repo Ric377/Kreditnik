@@ -15,6 +15,8 @@ class SettingsDataStore(private val context: Context) {
     companion object {
         val DARK_MODE_ENABLED = booleanPreferencesKey("dark_mode_enabled")
         val DEFAULT_CURRENCY = stringPreferencesKey("default_currency")
+        val REMINDER_DAYS_BEFORE = intPreferencesKey("reminder_days_before")
+        val REMINDER_TIME = stringPreferencesKey("reminder_time")
     }
 
     val darkModeEnabledFlow: Flow<Boolean> = context.dataStore.data
@@ -32,6 +34,28 @@ class SettingsDataStore(private val context: Context) {
         .map { preferences ->
             preferences[DEFAULT_CURRENCY] ?: "RUB"
         }
+
+    val reminderDaysBeforeFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[REMINDER_DAYS_BEFORE] ?: 1
+        }
+
+    val reminderTimeFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[REMINDER_TIME] ?: "12:00"
+        }
+
+    suspend fun setReminderDaysBefore(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[REMINDER_DAYS_BEFORE] = days
+        }
+    }
+
+    suspend fun setReminderTime(time: String) {
+        context.dataStore.edit { preferences ->
+            preferences[REMINDER_TIME] = time
+        }
+    }
 
     suspend fun setDefaultCurrency(currency: String) {
         context.dataStore.edit { preferences ->

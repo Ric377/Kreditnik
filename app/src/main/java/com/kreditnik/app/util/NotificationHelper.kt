@@ -121,8 +121,13 @@ object NotificationHelper {
             }
         }
 
-        val reminderDate = paymentDay.minusDays(1)
-        val time = LocalTime.of(12, 0) // 12:00 дня
+        val reminderDate = paymentDay.minusDays(loan.reminderDaysBefore?.toLong() ?: 1)
+        val time = try {
+            LocalTime.parse(loan.reminderTime ?: "12:00")
+        } catch (e: Exception) {
+            LocalTime.of(12, 0)
+        }
+
 
         return reminderDate.atTime(time)
             .atZone(ZoneId.systemDefault())

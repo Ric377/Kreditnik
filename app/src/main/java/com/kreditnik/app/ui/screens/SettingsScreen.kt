@@ -180,6 +180,69 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                 }
             }
 
+            // Настройка: за сколько дней напоминать
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                val daysOptions = listOf(0, 1, 2, 3, 5, 7)
+                val selectedDays = settingsViewModel.reminderDaysBefore.collectAsState()
+
+                Column(Modifier.padding(16.dp)) {
+                    Text("Напомнить за (дней):", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        daysOptions.forEach { day ->
+                            val selected = day == selectedDays.value
+                            AssistChip(
+                                onClick = { settingsViewModel.setReminderDaysBefore(day) },
+                                label = { Text("$day") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+// Настройка: время напоминания
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                val timeOptions = listOf("09:00", "12:00", "15:00", "18:00", "21:00")
+                val selectedTime = settingsViewModel.reminderTime.collectAsState()
+
+                Column(Modifier.padding(16.dp)) {
+                    Text("Время напоминания:", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        timeOptions.forEach { time ->
+                            val selected = time == selectedTime.value
+                            AssistChip(
+                                onClick = { settingsViewModel.setReminderTime(time) },
+                                label = { Text(time) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+
             // Объединённый блок
             Card(
                 shape = RoundedCornerShape(16.dp),

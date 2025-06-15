@@ -15,6 +15,9 @@ data class Loan(
     val startDate: LocalDate,
     val monthlyPaymentDay: Int,         // День месяца платежа для кредитов
     val reminderEnabled: Boolean = false,
+    val reminderDaysBefore: Int? = 1,
+    val reminderTime: String? = "12:00",
+
 
 
     /**
