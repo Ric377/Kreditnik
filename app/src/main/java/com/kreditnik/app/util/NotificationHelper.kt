@@ -30,7 +30,6 @@ object NotificationHelper {
                         (Math.pow(1 + monthlyRate, loan.months.toDouble()) - 1)
             }
             putExtra("monthlyPayment", monthlyPayment)
-
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -40,33 +39,27 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        alarmManager.cancel(pendingIntent) // ← ✅ отменяем старую
-
-
-
+        alarmManager.cancel(pendingIntent)
 
         val reminderTime = calculateReminderTime(loan)
         val now = System.currentTimeMillis()
 
-        val paymentDay = reminderTime + 24 * 60 * 60 * 1000L // 12:00 следующего дня
-        val latestAllowedTime = paymentDay - 60_000 // 23:59:00
+        val paymentDay = reminderTime + 24 * 60 * 60 * 1000L
+        val latestAllowedTime = paymentDay - 60_000
 
-        val finalReminderTime = if (now in reminderTime..latestAllowedTime) {
-            Log.d("ReminderTest", "🟡 Системное время попадает в диапазон 12:00 до 23:59 — срабатываем немедленно")
-            now + 5_000 // через 5 секунд
-        } else {
-            reminderTime
-        }
+        val finalReminderTime =
+            if (now in reminderTime..latestAllowedTime) {
+                Log.d("ReminderTest", "🟡 В интервале — триггерим немедленно")
+                now + 5_000
+            } else {
+                reminderTime
+            }
 
-        Log.d("ReminderTest", "🔧 Reminder будет установлен на: " +
-                java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(java.util.Date(finalReminderTime))
+        Log.d(
+            "ReminderTest",
+            "🔧 Reminder будет установлен на: " +
+                    java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(java.util.Date(finalReminderTime))
         )
-
-
-        //ТЕСТ
-        val sdf = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm")
-        android.util.Log.d("ReminderTest", "⏰ Устанавливаем уведомление на ${sdf.format(java.util.Date(reminderTime))}")
-        //КОНЕЦ ТЕСТА
 
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
@@ -75,7 +68,6 @@ object NotificationHelper {
                     finalReminderTime,
                     pendingIntent
                 )
-
             } else {
                 Toast.makeText(
                     context,
@@ -105,7 +97,6 @@ object NotificationHelper {
         )
 
         alarmManager.cancel(pendingIntent)
-
     }
 
     private fun calculateReminderTime(loan: Loan): Long {
@@ -127,7 +118,6 @@ object NotificationHelper {
         } catch (e: Exception) {
             LocalTime.of(12, 0)
         }
-
 
         return reminderDate.atTime(time)
             .atZone(ZoneId.systemDefault())
@@ -158,7 +148,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val timeInMillis = System.currentTimeMillis() + 60 * 1000 // через 1 минуту
+        val timeInMillis = System.currentTimeMillis() + 60 * 1000
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
@@ -168,5 +158,4 @@ object NotificationHelper {
 
         Toast.makeText(context, "Тестовое уведомление через 1 минуту", Toast.LENGTH_SHORT).show()
     }
-
 }

@@ -48,110 +48,111 @@ private fun NumberPicker(
     state: MutableState<Int>,
     modifier: Modifier = Modifier,
     itemHeight: Dp = 40.dp,
-    endlessScroll: Boolean = false // Новый параметр
+    endlessScroll: Boolean = false,
+    autoSnap: Boolean = true
 ) {
     val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
 
-    // Количество элементов, дублируемых с каждой стороны для создания "бесконечности"
-    val cyclePadding = if (endlessScroll) 200 else 0 // Достаточно большое число
-    val extendedItems = remember(items, endlessScroll) {
-        if (endlessScroll) {
-            val originalSize = items.size
-            List(cyclePadding) { items[it % originalSize] } +
-                    items +
-                    List(cyclePadding) { items[it % originalSize] }
-        } else {
-            items
+    /* ---------- расширенный список ---------- */
+
+    val cycles = 5                                      // 5 полных копий => «бесконечность»
+    val extended = remember(items, endlessScroll) {
+        if (endlessScroll) buildList {
+            repeat(cycles) { addAll(items) }            // …23 0 1 2 … 23 0 1 …
+        } else items
+    }
+    val originStart = if (endlessScroll) items.size * (cycles / 2) else 0
+
+    /* ---------- состояние прокрутки ---------- */
+
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (endlessScroll)
+            originStart + state.value - 1      // ← вернуть “−1”
+        else
+            (state.value - 1).coerceAtLeast(0)
+    )
+
+    /* ---------- «живой» центральный индекс ---------- */
+
+    val centerOrig by remember(listState) {
+        derivedStateOf {
+            val centerExt =
+                listState.firstVisibleItemIndex + 1 +
+                        (listState.firstVisibleItemScrollOffset / itemHeightPx).roundToInt()
+            if (endlessScroll) {
+                val raw = centerExt - originStart
+                ((raw % items.size) + items.size) % items.size       // floorMod
+            } else {
+                centerExt.coerceIn(0, items.size - 1)
+            }
         }
     }
-    val originalStartIndex = if (endlessScroll) cyclePadding else 0
 
-    // Инициализация listState с учетом начального смещения для бесконечной прокрутки
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = originalStartIndex + state.value - 1) // -1 для центрирования
+    /* ---------- синхронизация ---------- */
 
     LaunchedEffect(listState.isScrollInProgress) {
         if (!listState.isScrollInProgress) {
-            // Вычисляем индекс центрального элемента в РАСШИРЕННОМ списке
-            val centerIndexInExtendedList = listState.firstVisibleItemIndex + 1 + (listState.firstVisibleItemScrollOffset / itemHeightPx).roundToInt()
-
-            // Вычисляем соответствующий индекс в ОРИГИНАЛЬНОМ списке
-            val finalIndexInOriginalList = if (endlessScroll) {
-                (centerIndexInExtendedList - originalStartIndex).coerceIn(0, items.size - 1)
-            } else {
-                centerIndexInExtendedList.coerceIn(0, items.size - 1)
-            }
-
-            // Обновляем состояние
-            if (state.value != finalIndexInOriginalList) {
-                state.value = finalIndexInOriginalList
-            }
-
-            // Если включена бесконечная прокрутка, "перепрыгиваем"
-            // к соответствующей позиции в центральном блоке расширенного списка
-            if (endlessScroll) {
-                val targetIndexForAnimation = originalStartIndex + finalIndexInOriginalList - 1
-                if (listState.firstVisibleItemIndex != targetIndexForAnimation) {
-                    listState.animateScrollToItem(targetIndexForAnimation)
+            if (state.value != centerOrig) state.value = centerOrig
+            if (endlessScroll && autoSnap) {
+                val target = originStart + centerOrig - 1
+                if (listState.firstVisibleItemIndex != target) {
+                    listState.scrollToItem(target)                  // мгновенно, без задержки
                 }
-            } else {
-                listState.animateScrollToItem(finalIndexInOriginalList)
             }
         }
     }
 
-    // Автоматическая прокрутка при изменении state.value (например, извне)
     LaunchedEffect(state.value) {
-        if (!listState.isScrollInProgress) {
-            val targetIndex = if (endlessScroll) originalStartIndex + state.value - 1 else state.value
-            listState.animateScrollToItem(targetIndex)
+        if (endlessScroll && autoSnap && !listState.isScrollInProgress) {
+            listState.scrollToItem(originStart + state.value - 1)
         }
+
     }
 
+    /* ---------- UI ---------- */
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         LazyColumn(
             state = listState,
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState), // Передаем listState напрямую
+            flingBehavior = rememberSnapFlingBehavior(listState),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(extendedItems.size) { index ->
-                val originalIndex = if (endlessScroll) {
-                    (index - originalStartIndex).let {
-                        // Обертываем, чтобы получить правильный индекс в оригинальном диапазоне
-                        (it % items.size + items.size) % items.size
-                    }
-                } else {
-                    index
-                }
-
-                // Выделяем жирным, если это выбранное значение
-                val isSelected = remember { derivedStateOf { originalIndex == state.value } }
-
+            items(extended.size) { idxExt ->
+                val idxOrig = if (endlessScroll) {
+                    val raw = idxExt - originStart
+                    ((raw % items.size) + items.size) % items.size
+                } else idxExt
+                val selected = idxOrig == centerOrig
                 Text(
-                    text = extendedItems[index], // Отображаем элемент из расширенного списка
-                    style = if (isSelected.value) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
+                    text = extended[idxExt],
+                    style = if (selected)
+                        MaterialTheme.typography.headlineMedium
+                    else
+                        MaterialTheme.typography.bodyLarge,
                     modifier = Modifier
                         .height(itemHeight)
-                        .alpha(if (isSelected.value) 1f else 0.5f)
+                        .alpha(if (selected) 1f else 0.5f)
                 )
             }
         }
-        // Декоративные разделители сверху и снизу от центрального элемента
         Divider(
-            modifier = Modifier
-                .align(Alignment.Center)
+            Modifier.align(Alignment.Center)
                 .offset(y = -itemHeight / 2)
                 .padding(horizontal = 20.dp)
         )
         Divider(
-            modifier = Modifier
-                .align(Alignment.Center)
+            Modifier.align(Alignment.Center)
                 .offset(y = itemHeight / 2)
                 .padding(horizontal = 20.dp)
         )
     }
 }
+
+
+
+
+
 
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
@@ -388,8 +389,11 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
 
     // Диалог выбора количества дней
     if (showDayPicker) {
-        val daysList = (0..30).map { it.toString() }
-        val selectedDayIndex = remember { mutableStateOf(reminderDays) }
+        val daysList = (0..7).map { it.toString() }
+        val selectedDayIndex = remember(reminderDays) {
+            mutableStateOf(reminderDays.coerceIn(0, 7))
+        }
+
         AlertDialog(
             onDismissRequest = { showDayPicker = false },
             title = { Text("Выберите количество дней") },
@@ -398,7 +402,8 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                     items = daysList,
                     state = selectedDayIndex,
                     modifier = Modifier.height(120.dp),
-                    endlessScroll = false // Дни не должны быть бесконечными
+                    endlessScroll = true,
+                    autoSnap = false
                 )
             },
             confirmButton = {
