@@ -2,9 +2,13 @@
 
 package com.kreditnik.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,48 +17,165 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kreditnik.app.viewmodel.SettingsViewModel
-import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
+import androidx.compose.foundation.rememberScrollState
+
+/**
+ * Вспомогательный Composable для создания вертикального скроллируемого селектора чисел.
+ * @param items Список строк для отображения.
+ * @param state Состояние, хранящее текущий выбранный индекс (в оригинальном диапазоне).
+ * @param modifier Модификатор для настройки внешнего вида.
+ * @param itemHeight Высота каждого элемента в списке.
+ * @param endlessScroll Должен ли список прокручиваться бесконечно (зацикленно).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NumberPicker(
+    items: List<String>,
+    state: MutableState<Int>,
+    modifier: Modifier = Modifier,
+    itemHeight: Dp = 40.dp,
+    endlessScroll: Boolean = false // Новый параметр
+) {
+    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
+
+    // Количество элементов, дублируемых с каждой стороны для создания "бесконечности"
+    val cyclePadding = if (endlessScroll) 200 else 0 // Достаточно большое число
+    val extendedItems = remember(items, endlessScroll) {
+        if (endlessScroll) {
+            val originalSize = items.size
+            List(cyclePadding) { items[it % originalSize] } +
+                    items +
+                    List(cyclePadding) { items[it % originalSize] }
+        } else {
+            items
+        }
+    }
+    val originalStartIndex = if (endlessScroll) cyclePadding else 0
+
+    // Инициализация listState с учетом начального смещения для бесконечной прокрутки
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = originalStartIndex + state.value - 1) // -1 для центрирования
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            // Вычисляем индекс центрального элемента в РАСШИРЕННОМ списке
+            val centerIndexInExtendedList = listState.firstVisibleItemIndex + 1 + (listState.firstVisibleItemScrollOffset / itemHeightPx).roundToInt()
+
+            // Вычисляем соответствующий индекс в ОРИГИНАЛЬНОМ списке
+            val finalIndexInOriginalList = if (endlessScroll) {
+                (centerIndexInExtendedList - originalStartIndex).coerceIn(0, items.size - 1)
+            } else {
+                centerIndexInExtendedList.coerceIn(0, items.size - 1)
+            }
+
+            // Обновляем состояние
+            if (state.value != finalIndexInOriginalList) {
+                state.value = finalIndexInOriginalList
+            }
+
+            // Если включена бесконечная прокрутка, "перепрыгиваем"
+            // к соответствующей позиции в центральном блоке расширенного списка
+            if (endlessScroll) {
+                val targetIndexForAnimation = originalStartIndex + finalIndexInOriginalList - 1
+                if (listState.firstVisibleItemIndex != targetIndexForAnimation) {
+                    listState.animateScrollToItem(targetIndexForAnimation)
+                }
+            } else {
+                listState.animateScrollToItem(finalIndexInOriginalList)
+            }
+        }
+    }
+
+    // Автоматическая прокрутка при изменении state.value (например, извне)
+    LaunchedEffect(state.value) {
+        if (!listState.isScrollInProgress) {
+            val targetIndex = if (endlessScroll) originalStartIndex + state.value - 1 else state.value
+            listState.animateScrollToItem(targetIndex)
+        }
+    }
 
 
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        LazyColumn(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState), // Передаем listState напрямую
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(extendedItems.size) { index ->
+                val originalIndex = if (endlessScroll) {
+                    (index - originalStartIndex).let {
+                        // Обертываем, чтобы получить правильный индекс в оригинальном диапазоне
+                        (it % items.size + items.size) % items.size
+                    }
+                } else {
+                    index
+                }
+
+                // Выделяем жирным, если это выбранное значение
+                val isSelected = remember { derivedStateOf { originalIndex == state.value } }
+
+                Text(
+                    text = extendedItems[index], // Отображаем элемент из расширенного списка
+                    style = if (isSelected.value) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .height(itemHeight)
+                        .alpha(if (isSelected.value) 1f else 0.5f)
+                )
+            }
+        }
+        // Декоративные разделители сверху и снизу от центрального элемента
+        Divider(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = -itemHeight / 2)
+                .padding(horizontal = 20.dp)
+        )
+        Divider(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = itemHeight / 2)
+                .padding(horizontal = 20.dp)
+        )
+    }
+}
 
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
+    val reminderDays by settingsViewModel.reminderDaysBefore.collectAsState()
+    val reminderTime by settingsViewModel.reminderTime.collectAsState()
 
     val context = LocalContext.current
 
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showDayPicker by remember { mutableStateOf(false) }
     var currencyMenuExpanded by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
 
-
-
     val density = LocalDensity.current
-
-    // Состояния для хранения ширины и высоты TextButton
     var textButtonWidthPx by remember { mutableStateOf(0) }
     var textButtonHeightPx by remember { mutableStateOf(0) }
-    // Состояние для хранения глобальной позиции TextButton
-    var textButtonGlobalPositionX by remember { mutableStateOf(0f) } // <-- ВОЗВРАЩАЕМ X
-    var textButtonGlobalPositionY by remember { mutableStateOf(0f) }
-
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text("Настройки", style = MaterialTheme.typography.headlineSmall)
-                }
+                title = { Text("Настройки", style = MaterialTheme.typography.headlineSmall) }
             )
         }
     ) { innerPadding ->
@@ -65,6 +186,12 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                 .padding(vertical = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // Раздел "Общие"
+            Text(
+                text = "Общие",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+            )
             // Валюта по умолчанию
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -84,23 +211,14 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f)
                     )
-
-                    Box(
-                        // Убираем wrapContentSize(align = Alignment.TopEnd) для Box,
-                        // если хотим, чтобы меню выпадало из левого края кнопки.
-                        // Просто wrapContentSize() или без него, если TextButton сам определяет размер
-                        modifier = Modifier.wrapContentSize(Alignment.TopStart) // Чтобы Box соответствовал TopStart кнопки
-                    ) {
+                    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                         TextButton(
                             onClick = { currencyMenuExpanded = true },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                             modifier = Modifier
                                 .onGloballyPositioned { coordinates ->
-                                    // Получаем размеры и глобальную позицию TextButton
                                     textButtonWidthPx = coordinates.size.width
                                     textButtonHeightPx = coordinates.size.height
-                                    textButtonGlobalPositionX = coordinates.positionInWindow().x // <-- ВОЗВРАЩАЕМ X
-                                    textButtonGlobalPositionY = coordinates.positionInWindow().y
                                 }
                         ) {
                             Text(
@@ -115,15 +233,8 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                         DropdownMenu(
                             expanded = currencyMenuExpanded,
                             onDismissRequest = { currencyMenuExpanded = false },
-                            offset = DpOffset(
-                                x = 0.dp,
-                                y = with(density) { textButtonHeightPx.toDp() } - 103.dp
-                            ),
-
-
-                            properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+                            offset = DpOffset(x = 0.dp, y = with(density) { textButtonHeightPx.toDp() } - 103.dp),
                             modifier = Modifier
-                                // Устанавливаем ширину DropdownMenu равной ширине TextButton
                                 .width(with(density) { textButtonWidthPx.toDp() })
                                 .background(
                                     color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
@@ -137,12 +248,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                                         settingsViewModel.setDefaultCurrency(currency)
                                         currencyMenuExpanded = false
                                     },
-                                    text = {
-                                        Text(
-                                            text = currency,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                    }
+                                    text = { Text(text = currency, style = MaterialTheme.typography.bodyLarge) }
                                 )
                             }
                         }
@@ -173,14 +279,18 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                     )
                     Switch(
                         checked = darkModeEnabled,
-                        onCheckedChange = {
-                            settingsViewModel.setDarkMode(it)
-                        }
+                        onCheckedChange = { settingsViewModel.setDarkMode(it) }
                     )
                 }
             }
 
-            // Настройка: за сколько дней напоминать
+            // ---
+            // Раздел "Уведомления"
+            Text(
+                text = "Уведомления",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+            )
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
@@ -188,95 +298,171 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
-                val daysOptions = listOf(0, 1, 2, 3, 5, 7)
-                val selectedDays = settingsViewModel.reminderDaysBefore.collectAsState()
-
-                Column(Modifier.padding(16.dp)) {
-                    Text("Напомнить за (дней):", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Row {
-                        daysOptions.forEach { day ->
-                            val selected = day == selectedDays.value
-                            AssistChip(
-                                onClick = { settingsViewModel.setReminderDaysBefore(day) },
-                                label = { Text("$day") },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                ),
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-// Настройка: время напоминания
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                val timeOptions = listOf("09:00", "12:00", "15:00", "18:00", "21:00")
-                val selectedTime = settingsViewModel.reminderTime.collectAsState()
-
-                Column(Modifier.padding(16.dp)) {
-                    Text("Время напоминания:", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Row {
-                        timeOptions.forEach { time ->
-                            val selected = time == selectedTime.value
-                            AssistChip(
-                                onClick = { settingsViewModel.setReminderTime(time) },
-                                label = { Text(time) },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                ),
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-
-            // Объединённый блок
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .height(140.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .clickable { showDayPicker = true }
+                            .padding(horizontal = 16.dp, vertical = 18.dp)
+                    ) {
+                        Text(
+                            text = "За сколько дней напомнить",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "$reminderDays дн.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Выбрать количество дней")
+                    }
+
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showTimePicker = true }
+                            .padding(horizontal = 16.dp, vertical = 18.dp)
+                    ) {
+                        Text(
+                            text = "Время напоминания",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = reminderTime,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Выбрать время")
+                    }
+                }
+            }
+
+            // ---
+            // Раздел "О приложении"
+            Text(
+                text = "О приложении",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+            )
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .clickable { showAboutDialog = true }
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.CenterStart
+                            .padding(horizontal = 16.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("О приложении", style = MaterialTheme.typography.titleMedium)
+                        Text("О приложении", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                     }
-                    Divider()
-                    Box(
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
                             .clickable { showPrivacyPolicyDialog = true }
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.CenterStart
+                            .padding(horizontal = 16.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Политика конфиденциальности", style = MaterialTheme.typography.titleMedium)
+                        Text("Политика конфиденциальности", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                     }
                 }
             }
         }
+    }
+
+    // Диалог выбора количества дней
+    if (showDayPicker) {
+        val daysList = (0..30).map { it.toString() }
+        val selectedDayIndex = remember { mutableStateOf(reminderDays) }
+        AlertDialog(
+            onDismissRequest = { showDayPicker = false },
+            title = { Text("Выберите количество дней") },
+            text = {
+                NumberPicker(
+                    items = daysList,
+                    state = selectedDayIndex,
+                    modifier = Modifier.height(120.dp),
+                    endlessScroll = false // Дни не должны быть бесконечными
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.setReminderDaysBefore(selectedDayIndex.value)
+                    showDayPicker = false
+                }) { Text("ОК") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDayPicker = false }) { Text("Отмена") }
+            }
+        )
+    }
+
+    // Диалог выбора времени
+    if (showTimePicker) {
+        val parsedTime = remember(reminderTime) {
+            try { LocalTime.parse(reminderTime, DateTimeFormatter.ofPattern("HH:mm")) }
+            catch (e: Exception) { LocalTime.of(12, 0) }
+        }
+        val hoursList = (0..23).map { "%02d".format(it) }
+        val minutesList = (0..59).map { "%02d".format(it) }
+        val selectedHourIndex = remember { mutableStateOf(parsedTime.hour) }
+        val selectedMinuteIndex = remember { mutableStateOf(parsedTime.minute) }
+
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Выберите время") },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    NumberPicker(
+                        items = hoursList,
+                        state = selectedHourIndex,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        endlessScroll = true // Включаем бесконечную прокрутку для часов
+                    )
+                    Text(":", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 8.dp))
+                    NumberPicker(
+                        items = minutesList,
+                        state = selectedMinuteIndex,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(120.dp),
+                        endlessScroll = true // Включаем бесконечную прокрутку для минут
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val formatted = String.format("%02d:%02d", selectedHourIndex.value, selectedMinuteIndex.value)
+                    settingsViewModel.setReminderTime(formatted)
+                    showTimePicker = false
+                }) { Text("ОК") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Отмена") }
+            }
+        )
     }
 
     if (showAboutDialog) {
@@ -292,9 +478,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text("ОК")
-                }
+                TextButton(onClick = { showAboutDialog = false }) { Text("ОК") }
             }
         )
     }
@@ -304,12 +488,9 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             onDismissRequest = { showPrivacyPolicyDialog = false },
             title = { Text("Политика конфиденциальности") },
             text = {
-                // читаем файл assets/privacy_policy_ru.md один раз
                 val policyText by remember {
                     mutableStateOf(
-                        context.assets.open("privacy_policy_ru.md")
-                            .bufferedReader()
-                            .use { it.readText() }
+                        context.assets.open("privacy_policy_ru.md").bufferedReader().use { it.readText() }
                     )
                 }
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -317,9 +498,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPrivacyPolicyDialog = false }) {
-                    Text("ОК")
-                }
+                TextButton(onClick = { showPrivacyPolicyDialog = false }) { Text("ОК") }
             }
         )
     }

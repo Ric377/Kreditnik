@@ -244,11 +244,18 @@ fun LoanDetailScreen(
                     fun enableReminder() {
                         if (!switchState) {
                             switchState = true
-                            loanViewModel.updateLoan(loan.copy(reminderEnabled = true))
-                            NotificationHelper.scheduleLoanReminder(context, loan)
+                            val updatedLoan = loan.copy(
+                                reminderEnabled = true,
+                                reminderDaysBefore = settingsViewModel.reminderDaysBefore.value,
+                                reminderTime = settingsViewModel.reminderTime.value
+                            )
+                            loanViewModel.updateLoan(updatedLoan)
+                            NotificationHelper.scheduleLoanReminder(context, updatedLoan)
+
+
                             Toast.makeText(
                                 context,
-                                "Уведомление установлено на 12:00 за день до платежа",
+                                "Уведомление установлено",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
