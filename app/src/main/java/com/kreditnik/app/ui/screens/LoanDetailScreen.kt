@@ -279,7 +279,6 @@ fun LoanDetailScreen(
                                 reminderDaysBefore = settingsViewModel.reminderDaysBefore.value
                             )
                             loanViewModel.updateLoan(updatedLoan)
-                            NotificationHelper.cancelLoanReminder(context, updatedLoan)
 
                             Toast.makeText(
                                 context,

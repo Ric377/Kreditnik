@@ -43,16 +43,21 @@ class LoanViewModel(
 
     suspend fun addLoan(loan: Loan) {
         repository.insertLoan(loan)
+        // если пользователь включил напоминание – ставим будильник
+        if (loan.reminderEnabled) {
+        NotificationHelper.scheduleLoanReminder(appContext, loan)
+        }
         loadLoans()
     }
 
     fun updateLoan(loan: Loan) = viewModelScope.launch {
         repository.updateLoan(loan)
-        loadLoans()
-
+        // сперва снимаем старый будильник, потом ставим новый (если надо)
+        NotificationHelper.cancelLoanReminder(appContext, loan)
         if (loan.reminderEnabled) {
-            NotificationHelper.scheduleLoanReminder(appContext, loan)
+        NotificationHelper.scheduleLoanReminder(appContext, loan)
         }
+        loadLoans()
     }
 
 

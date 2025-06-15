@@ -28,6 +28,8 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Text
+import com.kreditnik.app.util.NotificationHelper
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -402,6 +404,8 @@ fun AddLoanScreen(
 
                                 loanViewModel.addLoan(newLoan)
                             } else {
+                                val reminderEnabledNow = loan.reminderEnabled
+
                                 val updatedLoan = loan.copy(
                                     name = name,
                                     type = selectedType,
@@ -419,8 +423,8 @@ fun AddLoanScreen(
                                     mandatoryPaymentDay = loan.mandatoryPaymentDay,
                                     gracePeriodEndDate = loan.gracePeriodEndDate,
                                     debtDueDate = loan.debtDueDate,
-                                    reminderDaysBefore = settingsVM.reminderDaysBefore.value,
-                                    reminderTime = settingsVM.reminderTime.value
+                                    reminderDaysBefore = if (reminderEnabledNow) settingsVM.reminderDaysBefore.value else null,
+                                    reminderTime = if (reminderEnabledNow) settingsVM.reminderTime.value else null
                                 )
 
                                 loanViewModel.updateLoan(updatedLoan)
