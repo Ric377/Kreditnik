@@ -95,6 +95,11 @@ dependencies {
 
     implementation ("androidx.compose.material3:material3:<latest_version>")
 
+    // WorkManager
+    implementation ("androidx.work:work-runtime-ktx:2.7.1") // Проверьте актуальную версию WorkManager
+    // Kotlinx Datetime (если еще не используется, но у вас, кажется, уже есть)
+    implementation ("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0") // Проверьте актуальную версию
+
     /* ───── Тесты ───── */
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
