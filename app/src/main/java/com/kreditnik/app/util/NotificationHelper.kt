@@ -13,10 +13,26 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
+import com.kreditnik.app.data.SettingsDataStore
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import com.kreditnik.app.data.DatabaseProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+
+
+
+
+
+
 
 object NotificationHelper {
 
     fun scheduleLoanReminder(context: Context, loan: Loan) {
+        Log.d("ReminderTest", "📅 scheduleLoanReminder вызван для ${loan.name}")
+
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
@@ -41,7 +57,7 @@ object NotificationHelper {
 
         alarmManager.cancel(pendingIntent)
 
-        val reminderTime = calculateReminderTime(loan)
+        val reminderTime = calculateReminderTime(context, loan)
         val now = System.currentTimeMillis()
 
         val paymentDay = reminderTime + 24 * 60 * 60 * 1000L
@@ -99,12 +115,15 @@ object NotificationHelper {
         alarmManager.cancel(pendingIntent)
     }
 
-    private fun calculateReminderTime(loan: Loan): Long {
+    private fun calculateReminderTime(context: Context, loan: Loan): Long {
         val today = LocalDate.now()
+
         val paymentDay = if (loan.monthlyPaymentDay == 0) {
             today.with(TemporalAdjusters.lastDayOfMonth())
         } else {
-            val tentative = today.withDayOfMonth(loan.monthlyPaymentDay.coerceAtMost(today.lengthOfMonth()))
+            val tentative = today.withDayOfMonth(
+                loan.monthlyPaymentDay.coerceAtMost(today.lengthOfMonth())
+            )
             if (tentative.isBefore(today) || tentative == today) {
                 tentative.plusMonths(1)
             } else {
@@ -112,9 +131,16 @@ object NotificationHelper {
             }
         }
 
-        val reminderDate = paymentDay.minusDays(loan.reminderDaysBefore?.toLong() ?: 1)
+        val reminderDays = loan.reminderDaysBefore ?: runBlocking {
+            SettingsDataStore(context).reminderDaysBeforeFlow.first()
+        }
+        val reminderDate = paymentDay.minusDays(reminderDays.toLong())
+
         val time = try {
-            LocalTime.parse(loan.reminderTime ?: "12:00")
+            val rawTime = loan.reminderTime ?: runBlocking {
+                SettingsDataStore(context).reminderTimeFlow.first()
+            }
+            LocalTime.parse(rawTime)
         } catch (e: Exception) {
             LocalTime.of(12, 0)
         }
@@ -124,6 +150,8 @@ object NotificationHelper {
             .toInstant()
             .toEpochMilli()
     }
+
+
 
     fun scheduleTestReminder(context: Context, loan: Loan) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -158,4 +186,14 @@ object NotificationHelper {
 
         Toast.makeText(context, "Тестовое уведомление через 1 минуту", Toast.LENGTH_SHORT).show()
     }
+    fun rescheduleAll(context: Context) {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val loanDao = com.kreditnik.app.data.DatabaseProvider.getDatabase(context).loanDao()
+            val loans = loanDao.getAllLoans()
+            loans.filter { it.reminderEnabled }.forEach {
+                scheduleLoanReminder(context, it)
+            }
+        }
+    }
+
 }

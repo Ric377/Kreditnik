@@ -1,7 +1,7 @@
 package com.kreditnik.app.data
 
 class LoanRepository(
-    private val loanDao: LoanDao,
+    private val loanDao: LoanDao
 ) {
 
     suspend fun insertLoan(loan: Loan) {
@@ -23,5 +23,4 @@ class LoanRepository(
     suspend fun getAllLoans(): List<Loan> {
         return loanDao.getAllLoans()
     }
-
 }

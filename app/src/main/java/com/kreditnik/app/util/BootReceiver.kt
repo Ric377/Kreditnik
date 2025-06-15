@@ -24,6 +24,8 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         if (action !in relevantActions) return
 
+        Log.d("ReminderTest", "🔄 BootReceiver получил событие: $action")
+
         Log.d("ReminderTest", "BootReceiver received $action")
 
         CoroutineScope(Dispatchers.IO).launch {

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kreditnik.app.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -408,6 +409,8 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             },
             confirmButton = {
                 TextButton(onClick = {
+                    Log.d("ReminderTest", "⚙️ Установлено: напоминать за ${selectedDayIndex.value} дней")
+
                     settingsViewModel.setReminderDaysBefore(selectedDayIndex.value)
                     showDayPicker = false
                 }) { Text("ОК") }
@@ -460,6 +463,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             confirmButton = {
                 TextButton(onClick = {
                     val formatted = String.format("%02d:%02d", selectedHourIndex.value, selectedMinuteIndex.value)
+                    Log.d("ReminderTest", "⏰ Установлено время напоминания: $formatted")
                     settingsViewModel.setReminderTime(formatted)
                     showTimePicker = false
                 }) { Text("ОК") }

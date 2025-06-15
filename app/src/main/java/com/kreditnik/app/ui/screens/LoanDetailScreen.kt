@@ -38,6 +38,7 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
+import android.util.Log
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +50,8 @@ fun LoanDetailScreen(
     loanViewModel: LoanViewModel
 ) {
     val currency by settingsViewModel.defaultCurrency.collectAsState()
+    val reminderTime by settingsViewModel.reminderTime.collectAsState()
+    val reminderDaysBefore by settingsViewModel.reminderDaysBefore.collectAsState()
     val expandedMenu = remember { mutableStateOf(false) }
     val showAddDialog = remember { mutableStateOf(false) }
     val showPayDialog = remember { mutableStateOf(false) }
@@ -242,15 +245,19 @@ fun LoanDetailScreen(
 
                     // ── включить / выключить без дублирования ────────────────────────────────
                     fun enableReminder() {
+                        Log.d("ReminderTest", "🟢 Пользователь включил напоминание для: ${loan.name}")
+
                         if (!switchState) {
                             switchState = true
                             val updatedLoan = loan.copy(
                                 reminderEnabled = true,
-                                reminderDaysBefore = settingsViewModel.reminderDaysBefore.value,
-                                reminderTime = settingsViewModel.reminderTime.value
+                                reminderDaysBefore = reminderDaysBefore,
+                                reminderTime = reminderTime
                             )
+
+                            Log.d("ReminderTest", "⚙️ Установка с параметрами: days=${updatedLoan.reminderDaysBefore}, time=${updatedLoan.reminderTime}")
+
                             loanViewModel.updateLoan(updatedLoan)
-                            NotificationHelper.scheduleLoanReminder(context, updatedLoan)
 
 
                             Toast.makeText(
@@ -262,10 +269,18 @@ fun LoanDetailScreen(
                     }
 
                     fun disableReminder() {
+                        Log.d("ReminderTest", "🔴 Пользователь отключил напоминание для: ${loan.name}")
                         if (switchState) {
                             switchState = false
-                            loanViewModel.updateLoan(loan.copy(reminderEnabled = false))
-                            NotificationHelper.cancelLoanReminder(context, loan)
+
+                            val updatedLoan = loan.copy(
+                                reminderEnabled = false,
+                                reminderTime = settingsViewModel.reminderTime.value,
+                                reminderDaysBefore = settingsViewModel.reminderDaysBefore.value
+                            )
+                            loanViewModel.updateLoan(updatedLoan)
+                            NotificationHelper.cancelLoanReminder(context, updatedLoan)
+
                             Toast.makeText(
                                 context,
                                 "Уведомление отменено",
@@ -273,6 +288,7 @@ fun LoanDetailScreen(
                             ).show()
                         }
                     }
+
 
 
                     // ── launchers ────────────────────────────────────────────────────────────
