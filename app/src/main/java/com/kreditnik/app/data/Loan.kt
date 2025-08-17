@@ -14,6 +14,7 @@ data class Loan(
     val interestRate: Double,
     val startDate: LocalDate,
     val monthlyPaymentDay: Int,         // День месяца платежа для кредитов
+    val usesSberbankCalculation: Boolean = false,
     val reminderEnabled: Boolean = false,
     val reminderDaysBefore: Int? = 1,
     val reminderTime: String? = "12:00",
@@ -32,6 +33,7 @@ data class Loan(
     val principal: Double,
 
     val months: Int,                    // Срок кредита (в месяцах)
+    val monthlyPayment: Double,         // Ежемесячный платеж
 
     // НОВЫЕ ПОЛЯ для ежедневных процентов (НЕ МЕНЯЮТ ДИЗАЙН НАПРЯМУЮ)
     val accruedInterest: Double = 0.0, // Начисленные, но еще не оплаченные проценты

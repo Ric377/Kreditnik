@@ -73,7 +73,6 @@ class LoanViewModel(
             // --- ШАГ 1: Актуализация процентов до применения транзакции ---
             // Сначала убедимся, что проценты для этого кредита актуальны на текущий день
             // Эта функция возвращает новую копию Loan с актуальными процентами и датой начисления
-            // !!! ИСПРАВЛЕНИЕ ЗДЕСЬ !!!
             // Используем calculateAndAccrueInterestAndSave, чтобы проценты были актуальны и СОХРАНЕНЫ перед платежом
             val loanWithAccruedInterest = calculateAndAccrueInterestAndSave(currentLoanFromDb)
 
@@ -138,19 +137,19 @@ class LoanViewModel(
      * Возвращает НОВЫЙ объект Loan с актуализированными accruedInterest и lastInterestCalculationDate.
      * СОХРАНЯЕТ В БАЗУ ДАННЫХ.
      */
+
+
     private suspend fun calculateAndAccrueInterestAndSave(loan: Loan): Loan {
         val today = LocalDate.now()
         var updatedLoan = loan
 
-        // Случай 1: Дата была переведена НАЗАД
+        // Случай 1: Дата была переведена НАЗАД (логика не меняется)
         if (loan.lastInterestCalculationDate.isAfter(today)) {
             val daysToGoBack = ChronoUnit.DAYS.between(today, loan.lastInterestCalculationDate).toInt()
             if (daysToGoBack > 0) {
                 val dailyRate = loan.interestRate / 100.0 / 365.0
                 val interestToDeduct = loan.principal * dailyRate * daysToGoBack
-
-                val newAccruedInterest = (loan.accruedInterest - interestToDeduct).coerceAtLeast(0.0) // Проценты не могут быть отрицательными
-
+                val newAccruedInterest = (loan.accruedInterest - interestToDeduct).coerceAtLeast(0.0)
                 updatedLoan = loan.copy(
                     accruedInterest = newAccruedInterest,
                     lastInterestCalculationDate = today
@@ -161,13 +160,25 @@ class LoanViewModel(
         }
         // Случай 2: Дата была переведена ВПЕРЕД или наступил новый день
         else if (loan.lastInterestCalculationDate.isBefore(today)) {
-            val daysToAccrue = ChronoUnit.DAYS.between(loan.lastInterestCalculationDate, today).toInt()
+            // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+            // Выбираем конечную дату для расчёта в зависимости от галочки
+            val endDate = if (loan.usesSberbankCalculation) {
+                today.minusDays(1) // Метод Сбера (считаем по вчерашний день)
+            } else {
+                today // Стандартный метод (считаем по сегодняшний день)
+            }
+
+            val daysToAccrue = ChronoUnit.DAYS.between(loan.lastInterestCalculationDate, endDate).toInt()
+            // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
             if (daysToAccrue > 0) {
                 val dailyRate = loan.interestRate / 100.0 / 365.0
                 val interestForPeriod = loan.principal * dailyRate * daysToAccrue
 
                 updatedLoan = loan.copy(
                     accruedInterest = loan.accruedInterest + interestForPeriod,
+                    // Важно: дату последнего расчёта ВСЕГДА обновляем на СЕГОДНЯ,
+                    // чтобы избежать повторного начисления за один и тот же день.
                     lastInterestCalculationDate = today
                 )
                 repository.updateLoan(updatedLoan)

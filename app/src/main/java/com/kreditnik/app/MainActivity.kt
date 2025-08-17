@@ -83,9 +83,8 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-
-                // === НАЧАЛО: автосоздание тестового кредита ===
-                LaunchedEffect(Unit) {
+                // автосоздание тестового кредита
+                LaunchedEffect(Unit) { // LaunchedEffect — это и есть нужная нам корутина
                     val existingLoans = loanViewModel.loans.value
                     if (existingLoans.isEmpty()) {
                         loanViewModel.addLoan(
@@ -97,6 +96,7 @@ class MainActivity : ComponentActivity() {
                                 initialPrincipal = 10000.0,
                                 interestRate = 10.0,
                                 months = 12,
+                                monthlyPayment = 879.16,
                                 startDate = LocalDate.now().minusMonths(1),
                                 monthlyPaymentDay = 15,
                                 reminderEnabled = false,
@@ -109,7 +109,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-                // === КОНЕЦ: автосоздание тестового кредита ===
 
                 MainScreen(loanViewModel, settingsViewModel)
             }

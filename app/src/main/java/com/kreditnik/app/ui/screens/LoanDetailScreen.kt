@@ -174,7 +174,7 @@ fun LoanDetailScreen(
                     )
                     LoanDetailItem(
                         "Ежемесячный платёж",
-                        "${calculateMonthlyPayment(loan.principal, loan.interestRate, loan.months).formatMoney()} $currency"
+                        "${loan.monthlyPayment.formatMoney()} $currency"
                     )
                     LoanDetailItem("Дата платежа", nextPaymentDate)
                 }
@@ -451,14 +451,4 @@ private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
     return DecimalFormat(pattern, sym).format(this)
-}
-
-private fun calculateMonthlyPayment(principal: Double, annualRate: Double, months: Int): Double {
-    val monthlyRate = (annualRate / 100) / 12
-    return if (monthlyRate == 0.0) {
-        principal / months
-    } else {
-        principal * (monthlyRate * Math.pow(1 + monthlyRate, months.toDouble())) /
-                (Math.pow(1 + monthlyRate, months.toDouble()) - 1)
-    }
 }
