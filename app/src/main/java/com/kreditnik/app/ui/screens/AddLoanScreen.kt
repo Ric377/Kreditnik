@@ -206,7 +206,7 @@ fun AddLoanScreen(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Расчёт по методу Сбера",
+                    text = "Расчёт начисленных процентов по методу Сбера",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
