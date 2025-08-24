@@ -35,12 +35,25 @@ import java.util.Locale
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
 
+/**
+ * Форматирует число типа [Double] в денежную строку согласно российским стандартам.
+ * - Использует пробел в качестве разделителя тысяч.
+ * - Скрывает дробную часть, если она равна нулю.
+ * @return Отформатированная строка.
+ */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"
     return DecimalFormat(pattern, sym).format(this)
 }
 
+/**
+ * Внутреннее содержимое карточки кредита, отображающее иконку, название и сумму.
+ * Этот компонент является stateless (не хранит состояние) и отвечает только за отображение.
+ *
+ * @param loan Объект кредита [Loan] для отображения.
+ * @param currency Символ валюты для отображения рядом с суммой.
+ */
 @Composable
 private fun LoanRowContent(loan: Loan, currency: String) {
     val totalAmountForDisplay = loan.principal + loan.accruedInterest
@@ -83,6 +96,16 @@ private fun LoanRowContent(loan: Loan, currency: String) {
     }
 }
 
+/**
+ * Карточка для отображения одного элемента в списке кредитов.
+ * Поддерживает два состояния: обычное и выбранное. Реагирует на короткое и длинное нажатие.
+ *
+ * @param loan Отображаемый объект кредита [Loan].
+ * @param currency Символ валюты.
+ * @param isSelected `true`, если элемент в данный момент выбран (для визуального выделения).
+ * @param onClick Лямбда, вызываемая при коротком нажатии.
+ * @param onLongClick Лямбда, вызываемая при длинном нажатии (для активации режима выбора).
+ */
 @Composable
 private fun LoanListItem(
     loan: Loan,
@@ -112,6 +135,11 @@ private fun LoanListItem(
     }
 }
 
+/**
+ * Карточка для отображения мотивирующей цитаты в пейджере.
+ *
+ * @param text Текст цитаты для отображения.
+ */
 @Composable
 private fun MotivationCard(text: String) {
     Card(
@@ -144,7 +172,20 @@ private fun MotivationCard(text: String) {
 }
 
 
-
+/**
+ * Главный экран приложения, отображающий список всех кредитов.
+ *
+ * Экран имеет два режима работы:
+ * 1.  **Обычный режим**: отображается общая сумма долга, список кредитов и пейджер
+ * с мотивирующими цитатами. Нажатие на элемент открывает его детальный экран.
+ * 2.  **Режим выбора**: активируется долгим нажатием на элемент. Верхняя панель (TopAppBar)
+ * меняется на контекстную, позволяя выбрать все элементы, удалить выбранные или
+ * сбросить выделение. Нажатие на кнопку "Назад" в этом режиме отменяет выбор.
+ *
+ * @param loanViewModel ViewModel для получения списка кредитов и их удаления.
+ * @param settingsViewModel ViewModel для получения настроек, например, символа валюты.
+ * @param navController Контроллер навигации для перехода на другие экраны.
+ */
 @Composable
 fun CreditsScreen(
     loanViewModel: LoanViewModel,

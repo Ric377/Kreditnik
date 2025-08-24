@@ -41,6 +41,19 @@ import android.net.Uri
 import android.util.Log
 
 
+/**
+ * Экран для отображения подробной информации о конкретном кредите.
+ *
+ * Предоставляет пользователю полную информацию о займе, включая суммы, ставки и даты.
+ * Позволяет выполнять основные операции: редактирование и удаление кредита через меню,
+ * добавление и погашение долга через диалоговые окна, а также включение/отключение
+ * напоминаний о платежах с запросом необходимых разрешений системы.
+ *
+ * @param loan Объект [Loan], детали которого необходимо отобразить.
+ * @param settingsViewModel ViewModel для доступа к глобальным настройкам приложения, таким как валюта.
+ * @param navController Контроллер навигации для перехода на другие экраны (например, редактирования).
+ * @param loanViewModel ViewModel для выполнения операций с данными кредита (обновление, удаление).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoanDetailScreen(
@@ -350,12 +363,6 @@ fun LoanDetailScreen(
                         }
                     )
                 }
-
-
-
-
-
-
             }
 
         }
@@ -432,6 +439,13 @@ fun LoanDetailScreen(
     }
 }
 
+/**
+ * Приватный Composable-компонент для отображения одного элемента детализации кредита.
+ * Используется для вывода пары "метка - значение" в统一 стиле.
+ *
+ * @param label Текстовая метка (название) поля.
+ * @param value Текстовое значение поля.
+ */
 @Composable
 private fun LoanDetailItem(label: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -447,6 +461,12 @@ private fun LoanDetailItem(label: String, value: String) {
     }
 }
 
+/**
+ * Форматирует число типа [Double] в денежную строку согласно российским стандартам.
+ * - Использует пробел в качестве разделителя тысяч.
+ * - Скрывает дробную часть, если она равна нулю.
+ * @return Отформатированная строка.
+ */
 private fun Double.formatMoney(): String {
     val sym = DecimalFormatSymbols(Locale("ru")).apply { groupingSeparator = ' ' }
     val pattern = if (this % 1.0 == 0.0) "#,###" else "#,###.##"

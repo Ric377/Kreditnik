@@ -1,9 +1,9 @@
 package com.kreditnik.app
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,7 +14,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -40,11 +39,15 @@ import com.kreditnik.app.ui.theme.KreditnikTheme
 import com.kreditnik.app.viewmodel.LoanViewModel
 import com.kreditnik.app.viewmodel.LoanViewModelFactory
 import com.kreditnik.app.viewmodel.SettingsViewModel
-import com.kreditnik.app.data.LoanType
-import java.time.LocalDate
 
+/**
+ * Главная и единственная Activity в приложении.
+ * Отвечает за настройку окружения, создание ViewModel, управление темой
+ * и размещение основного Composable-компонента [MainScreen].
+ */
 class MainActivity : ComponentActivity() {
 
+    // Регистрация лаунчера для запроса разрешений.
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {}
@@ -53,25 +56,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
-
-        val splashScreen = installSplashScreen()
-        splashScreen.setOnExitAnimationListener { provider ->
-            provider.view.animate()
-                .alpha(0f)
-                .setDuration(300L)
-                .withEndAction { provider.remove() }
-        }
+        installSplashScreen()
 
         setContent {
-            val systemTheme = isSystemInDarkTheme()
-            var useDarkTheme by rememberSaveable { mutableStateOf(systemTheme) }
-
             val settingsViewModel: SettingsViewModel = viewModel()
-            val darkThemeState by settingsViewModel.darkModeEnabled.collectAsState(initial = null)
-
-            LaunchedEffect(darkThemeState) {
-                darkThemeState?.let { useDarkTheme = it }
-            }
+            val useDarkTheme by settingsViewModel.darkModeEnabled.collectAsState(
+                initial = isSystemInDarkTheme()
+            )
 
             KreditnikTheme(darkTheme = useDarkTheme) {
                 val loanViewModel: LoanViewModel = viewModel(
@@ -82,37 +73,48 @@ class MainActivity : ComponentActivity() {
                         applicationContext
                     )
                 )
-
                 MainScreen(loanViewModel, settingsViewModel)
             }
         }
     }
 
+    /**
+     * Проверяет и при необходимости запрашивает разрешение на установку точных будильников.
+     * Актуально для Android 12 (API 31) и выше.
+     */
     private fun requestExactAlarmPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                intent.data = android.net.Uri.parse("package:$packageName")
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = android.net.Uri.parse("package:$packageName")
+                }
                 startActivity(intent)
             }
         }
     }
 
+    /**
+     * Создает канал уведомлений, необходимый для Android 8.0 (API 26) и выше.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "loan_channel",
-                "Кредиты",
+                "Напоминания о кредитах",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Напоминания о платежах и советах"
+                description = "Канал для отправки напоминаний о предстоящих платежах."
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
 
+    /**
+     * Отправляет тестовое уведомление.
+     * @param loanViewModel ViewModel для получения данных о кредите.
+     */
     private fun sendNotification(loanViewModel: LoanViewModel) {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -125,7 +127,6 @@ class MainActivity : ComponentActivity() {
         val total = loan.initialPrincipal / loan.months + loan.accruedInterest / loan.months
         val paymentText = "Завтра платёж по кредиту «${loan.name}» на сумму ${"%.2f".format(total)} ₽."
 
-
         val builder = NotificationCompat.Builder(this, "loan_channel")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Напоминание о платеже")
@@ -136,23 +137,25 @@ class MainActivity : ComponentActivity() {
             notify(1001, builder.build())
         }
     }
-
 }
 
-enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
+/**
+ * Определяет элементы нижней навигационной панели.
+ */
+private enum class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     Credits("credits", Icons.AutoMirrored.Filled.List, "Кредиты"),
     Settings("settings", Icons.Filled.Settings, "Настройки")
 }
 
+/**
+ * Основной Composable-компонент, который строит UI приложения.
+ */
 @Composable
 fun MainScreen(
     loanViewModel: LoanViewModel,
     settingsViewModel: SettingsViewModel
 ) {
-    val navControllers = remember {
-        BottomNavItem.values().associateWith { mutableStateOf<NavHostController?>(null) }
-    }
-
+    val navController = rememberNavController()
     var selectedItem by rememberSaveable { mutableStateOf(BottomNavItem.Credits) }
 
     Scaffold(
@@ -162,11 +165,10 @@ fun MainScreen(
                     NavigationBarItem(
                         selected = selectedItem == item,
                         onClick = {
-                            val controller = navControllers[item]?.value
-                            if (selectedItem == item && controller != null) {
-                                controller.popBackStack(route = item.route, inclusive = false)
-                            } else {
-                                selectedItem = item
+                            selectedItem = item
+                            navController.navigate(item.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
                             }
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },
@@ -176,57 +178,38 @@ fun MainScreen(
             }
         }
     ) { innerPadding ->
-        val navController = navControllers.getValue(selectedItem).value
-            ?: rememberNavController().also { navControllers.getValue(selectedItem).value = it }
-
         NavHost(
             navController = navController,
-            startDestination = selectedItem.route,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            startDestination = BottomNavItem.Credits.route,
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomNavItem.Credits.route) {
-                CreditsScreen(
-                    loanViewModel = loanViewModel,
-                    settingsViewModel = settingsViewModel,
-                    navController = navController
-                )
+                CreditsScreen(loanViewModel, settingsViewModel, navController)
             }
-
             composable(BottomNavItem.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(settingsViewModel)
             }
-
             composable("addLoan") {
                 AddLoanScreen(loanViewModel, navController)
             }
-
             composable(
                 route = "editLoan/{loanId}",
                 arguments = listOf(navArgument("loanId") { type = NavType.LongType })
             ) { backStackEntry ->
-                val loanId = backStackEntry.arguments?.getLong("loanId") ?: return@composable
-                val editLoan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId }
-                if (editLoan != null) {
-                    AddLoanScreen(loanViewModel, navController, editLoan)
+                val loanId = backStackEntry.arguments?.getLong("loanId")
+                val loanToEdit = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId }
+                if (loanToEdit != null) {
+                    AddLoanScreen(loanViewModel, navController, loanToEdit)
                 }
             }
-
             composable(
                 route = "loanDetail/{loanId}",
-                arguments = listOf(navArgument("loanId") { type = NavType.IntType })
+                arguments = listOf(navArgument("loanId") { type = NavType.LongType })
             ) { backStackEntry ->
-                val loanId = backStackEntry.arguments?.getInt("loanId") ?: return@composable
-                val loan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId.toLong() }
-                val detailSettingsViewModel: SettingsViewModel = viewModel()
+                val loanId = backStackEntry.arguments?.getLong("loanId")
+                val loan = loanViewModel.loans.collectAsState().value.firstOrNull { it.id == loanId }
                 if (loan != null) {
-                    LoanDetailScreen(
-                        loan = loan,
-                        settingsViewModel = detailSettingsViewModel,
-                        navController = navController,
-                        loanViewModel = loanViewModel
-                    )
+                    LoanDetailScreen(loan, settingsViewModel, navController, loanViewModel)
                 }
             }
         }

@@ -1,8 +1,6 @@
-// LoanViewModel.kt
 package com.kreditnik.app.viewmodel
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kreditnik.app.data.Loan
@@ -14,6 +12,14 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
+/**
+ * ViewModel для управления данными о кредитах.
+ * Отвечает за взаимодействие с репозиторием, обработку бизнес-логики
+ * и предоставление данных для UI-слоя.
+ *
+ * @property repository Репозиторий для доступа к данным о кредитах.
+ * @property appContext Контекст приложения, необходимый для работы с уведомлениями.
+ */
 class LoanViewModel(
     private val repository: LoanRepository,
     private val appContext: Context
@@ -26,6 +32,10 @@ class LoanViewModel(
         loadLoans()
     }
 
+    /**
+     * Загружает все кредиты из репозитория, выполняет для каждого
+     * актуализацию начисленных процентов и обновляет [StateFlow] для UI.
+     */
     fun loadLoans() = viewModelScope.launch {
         val currentLoans = repository.getAllLoans()
         val updatedLoansForUi = mutableListOf<Loan>()
@@ -37,6 +47,9 @@ class LoanViewModel(
         _loans.value = updatedLoansForUi
     }
 
+    /**
+     * Добавляет новый кредит в базу данных и планирует напоминание, если необходимо.
+     */
     suspend fun addLoan(loan: Loan) {
         repository.insertLoan(loan)
         if (loan.reminderEnabled) {
@@ -45,6 +58,9 @@ class LoanViewModel(
         loadLoans()
     }
 
+    /**
+     * Обновляет существующий кредит и перепланирует напоминание.
+     */
     fun updateLoan(loan: Loan) = viewModelScope.launch {
         repository.updateLoan(loan)
         NotificationHelper.cancelLoanReminder(appContext, loan)
@@ -54,37 +70,46 @@ class LoanViewModel(
         loadLoans()
     }
 
+    /**
+     * Удаляет кредит из базы данных.
+     */
     fun deleteLoan(loan: Loan) = viewModelScope.launch {
         repository.deleteLoan(loan)
         loadLoans()
     }
 
+    /**
+     * Обрабатывает финансовую операцию (платеж или увеличение долга).
+     * Сначала погашаются начисленные проценты, затем остаток суммы идет
+     * на погашение основного долга.
+     *
+     * @param loanId ID кредита для обновления.
+     * @param delta Сумма операции. Отрицательное значение для платежа,
+     * положительное для увеличения основного долга.
+     */
     fun updateLoanPrincipal(loanId: Long, delta: Double) = viewModelScope.launch {
         repository.getLoanById(loanId)?.let { currentLoanFromDb ->
             val loanWithAccruedInterest = calculateAndAccrueInterestAndSave(currentLoanFromDb)
 
             var newPrincipal = loanWithAccruedInterest.principal
             var newAccruedInterest = loanWithAccruedInterest.accruedInterest
-            val amountToProcess = delta
 
-            if (amountToProcess < 0) { // Платеж
-                var paymentAmount = -amountToProcess
+            if (delta < 0) { // Платеж
+                var paymentAmount = -delta
 
-                // Сначала погашаем проценты
                 if (newAccruedInterest > 0) {
                     val interestPaid = minOf(paymentAmount, newAccruedInterest)
                     newAccruedInterest -= interestPaid
                     paymentAmount -= interestPaid
                 }
 
-                // Затем погашаем основной долг
                 if (paymentAmount > 0) {
                     val principalPaid = minOf(paymentAmount, newPrincipal)
                     newPrincipal -= principalPaid
                 }
 
             } else { // Увеличение долга
-                newPrincipal += amountToProcess
+                newPrincipal += delta
             }
 
             repository.updateLoan(
@@ -114,7 +139,7 @@ class LoanViewModel(
         val today = LocalDate.now()
 
         if (loan.lastInterestCalculationDate.isAfter(today)) {
-            // Обработка перевода времени назад
+            // Обработка перевода системного времени назад
             val daysToGoBack = ChronoUnit.DAYS.between(today, loan.lastInterestCalculationDate)
             var interestToDeduct = 0.0
             for (i in 0 until daysToGoBack) {
@@ -150,10 +175,6 @@ class LoanViewModel(
                     interestForPeriod += loan.principal * dailyRate
                 }
 
-                if (loan.usesSberbankCalculation) {
-                    Log.d("SberTest", "5. Итого начислено процентов: $interestForPeriod")
-                }
-
                 val updatedLoan = loan.copy(
                     accruedInterest = loan.accruedInterest + interestForPeriod,
                     lastInterestCalculationDate = today
@@ -162,7 +183,7 @@ class LoanViewModel(
                 return updatedLoan
             }
         }
-        // Если дата не изменилась, возвращаем исходный объект
+        // Если дата расчета актуальна, возвращаем исходный объект
         return loan
     }
 }

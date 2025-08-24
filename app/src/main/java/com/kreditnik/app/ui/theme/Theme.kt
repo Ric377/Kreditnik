@@ -1,6 +1,5 @@
 package com.kreditnik.app.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -21,22 +20,23 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
+/**
+ * Основная тема приложения "Кредитник".
+ *
+ * Применяет [MaterialTheme] с определенными цветовыми схемами и типографикой.
+ * Поддерживает системную темную тему и динамические цвета (Material You) на Android 12+.
+ *
+ * @param darkTheme Если `true`, применяется темная цветовая схема. По умолчанию
+ * определяется системной настройкой.
+ * @param dynamicColor Если `true` (и устройство поддерживает), используются динамические
+ * цвета, сгенерированные из обоев пользователя.
+ * @param content Содержимое, к которому будет применена тема.
+ */
 @Composable
 fun KreditnikTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -45,7 +45,6 @@ fun KreditnikTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }

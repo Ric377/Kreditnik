@@ -7,32 +7,33 @@ import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import com.kreditnik.app.data.Loan
-import com.kreditnik.app.util.ReminderReceiver
-import android.util.Log
+import com.kreditnik.app.data.DatabaseProvider
+import com.kreditnik.app.data.SettingsDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
-import com.kreditnik.app.data.SettingsDataStore
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.first
-import com.kreditnik.app.data.DatabaseProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
-
-
-
-
-
-
-
+/**
+ * Утилитарный объект для управления планированием и отменой напоминаний о платежах.
+ * Использует [AlarmManager] для установки точных "будильников", которые срабатывают
+ * даже если приложение неактивно.
+ */
 object NotificationHelper {
 
+    /**
+     * Планирует напоминание для указанного кредита.
+     * Если для этого кредита уже существует запланированное напоминание, оно будет перезаписано.
+     *
+     * @param context Контекст приложения.
+     * @param loan Объект кредита, для которого нужно установить напоминание.
+     */
     fun scheduleLoanReminder(context: Context, loan: Loan) {
-        Log.d("ReminderTest", "📅 scheduleLoanReminder вызван для ${loan.name}")
-
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
@@ -55,52 +56,33 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        alarmManager.cancel(pendingIntent)
-
-        val reminderTime = calculateReminderTime(context, loan)
-        val now = System.currentTimeMillis()
-
-        val paymentDay = reminderTime + 24 * 60 * 60 * 1000L
-        val latestAllowedTime = paymentDay - 60_000
-
-        val finalReminderTime =
-            if (now in reminderTime..latestAllowedTime) {
-                Log.d("ReminderTest", "🟡 В интервале — триггерим немедленно")
-                now + 5_000
-            } else {
-                reminderTime
-            }
-
-        Log.d(
-            "ReminderTest",
-            "🔧 Reminder будет установлен на: " +
-                    java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(java.util.Date(finalReminderTime))
-        )
+        val reminderTimeInMillis = calculateReminderTime(context, loan)
 
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    finalReminderTime,
+                    reminderTimeInMillis,
                     pendingIntent
                 )
             } else {
                 Toast.makeText(
                     context,
-                    "Приложение не имеет разрешения на точные напоминания.",
+                    "Нет разрешения на установку точных напоминаний.",
                     Toast.LENGTH_LONG
                 ).show()
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
-            Toast.makeText(
-                context,
-                "Ошибка при установке напоминания: нет разрешения.",
-                Toast.LENGTH_LONG
-            ).show()
         }
     }
 
+    /**
+     * Отменяет ранее запланированное напоминание для указанного кредита.
+     *
+     * @param context Контекст приложения.
+     * @param loan Объект кредита, для которого нужно отменить напоминание.
+     */
     fun cancelLoanReminder(context: Context, loan: Loan) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java)
@@ -115,6 +97,13 @@ object NotificationHelper {
         alarmManager.cancel(pendingIntent)
     }
 
+    /**
+     * Вычисляет точное время в миллисекундах для срабатывания напоминания.
+     *
+     * @param context Контекст для доступа к [SettingsDataStore].
+     * @param loan Кредит, для которого рассчитывается время.
+     * @return Время срабатывания в миллисекундах с начала эпохи.
+     */
     private fun calculateReminderTime(context: Context, loan: Loan): Long {
         val today = LocalDate.now()
 
@@ -136,11 +125,11 @@ object NotificationHelper {
         }
         val reminderDate = paymentDay.minusDays(reminderDays.toLong())
 
+        val timeString = loan.reminderTime ?: runBlocking {
+            SettingsDataStore(context).reminderTimeFlow.first()
+        }
         val time = try {
-            val rawTime = loan.reminderTime ?: runBlocking {
-                SettingsDataStore(context).reminderTimeFlow.first()
-            }
-            LocalTime.parse(rawTime)
+            LocalTime.parse(timeString)
         } catch (e: Exception) {
             LocalTime.of(12, 0)
         }
@@ -151,8 +140,10 @@ object NotificationHelper {
             .toEpochMilli()
     }
 
-
-
+    /**
+     * Планирует тестовое напоминание, которое сработает через одну минуту.
+     * Используется для проверки работоспособности системы уведомлений.
+     */
     fun scheduleTestReminder(context: Context, loan: Loan) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -184,16 +175,20 @@ object NotificationHelper {
             pendingIntent
         )
 
-        Toast.makeText(context, "Тестовое уведомление через 1 минуту", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Тестовое уведомление будет отправлено через 1 минуту", Toast.LENGTH_SHORT).show()
     }
+
+    /**
+     * Перепланирует напоминания для всех кредитов с включенными уведомлениями.
+     * Вызывается после системных событий, таких как перезагрузка.
+     */
     fun rescheduleAll(context: Context) {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            val loanDao = com.kreditnik.app.data.DatabaseProvider.getDatabase(context).loanDao()
+        CoroutineScope(Dispatchers.IO).launch {
+            val loanDao = DatabaseProvider.getDatabase(context).loanDao()
             val loans = loanDao.getAllLoans()
             loans.filter { it.reminderEnabled }.forEach {
                 scheduleLoanReminder(context, it)
             }
         }
     }
-
 }

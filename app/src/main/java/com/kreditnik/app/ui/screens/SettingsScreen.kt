@@ -35,12 +35,18 @@ import kotlin.math.roundToInt
 import androidx.compose.foundation.rememberScrollState
 
 /**
- * Вспомогательный Composable для создания вертикального скроллируемого селектора чисел.
- * @param items Список строк для отображения.
- * @param state Состояние, хранящее текущий выбранный индекс (в оригинальном диапазоне).
+ * Кастомный Composable-компонент, реализующий скроллируемый селектор ("колесо") для выбора значения.
+ *
+ * Компонент отображает вертикальный список элементов, визуально выделяя тот, что находится в центре.
+ * Поддерживает бесконечную прокрутку для создания эффекта зацикленного списка.
+ * Синхронизирует свое внутреннее состояние прокрутки с внешним состоянием `MutableState<Int>`.
+ *
+ * @param items Список строк для отображения в селекторе.
+ * @param state Внешнее состояние, хранящее текущий выбранный *индекс* из оригинального списка `items`.
  * @param modifier Модификатор для настройки внешнего вида.
- * @param itemHeight Высота каждого элемента в списке.
- * @param endlessScroll Должен ли список прокручиваться бесконечно (зацикленно).
+ * @param itemHeight Высота каждого элемента в списке, используется для точных расчетов прокрутки.
+ * @param endlessScroll Если `true`, список будет "бесконечным", позволяя прокручивать его по кругу.
+ * @param autoSnap Если `true`, список будет автоматически прокручиваться к значению, установленному извне.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -138,12 +144,14 @@ private fun NumberPicker(
             }
         }
         Divider(
-            Modifier.align(Alignment.Center)
+            Modifier
+                .align(Alignment.Center)
                 .offset(y = -itemHeight / 2)
                 .padding(horizontal = 20.dp)
         )
         Divider(
-            Modifier.align(Alignment.Center)
+            Modifier
+                .align(Alignment.Center)
                 .offset(y = itemHeight / 2)
                 .padding(horizontal = 20.dp)
         )
@@ -151,10 +159,18 @@ private fun NumberPicker(
 }
 
 
-
-
-
-
+/**
+ * Экран настроек приложения.
+ *
+ * Позволяет пользователю настраивать различные параметры:
+ * - **Общие:** выбор валюты по умолчанию, включение/отключение темной темы.
+ * - **Уведомления:** установка времени и количества дней для напоминаний о платежах.
+ * - **О приложении:** просмотр информации о приложении и политики конфиденциальности.
+ *
+ * Использует [SettingsViewModel] для чтения и сохранения всех настроек.
+ *
+ * @param settingsViewModel ViewModel, предоставляющая доступ к настройкам и методам их изменения.
+ */
 @Composable
 fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
     val darkModeEnabled by settingsViewModel.darkModeEnabled.collectAsState()

@@ -5,12 +5,15 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Предоставляет TypeConverter'ы для Room для корректного сохранения
+ * и извлечения типов данных Java Time API (LocalDate, LocalDateTime).
+ */
 class Converters {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-    // LocalDate converters
     @TypeConverter
     fun fromLocalDate(value: LocalDate?): String? {
         return value?.format(dateFormatter)
@@ -23,7 +26,6 @@ class Converters {
         }
     }
 
-    // LocalDateTime converters
     @TypeConverter
     fun fromLocalDateTime(value: LocalDateTime?): String? {
         return value?.format(dateTimeFormatter)
@@ -35,5 +37,4 @@ class Converters {
             LocalDateTime.parse(it, dateTimeFormatter)
         }
     }
-
 }

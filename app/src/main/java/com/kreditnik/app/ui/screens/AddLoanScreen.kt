@@ -28,9 +28,30 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Text
-import com.kreditnik.app.util.NotificationHelper
 
-
+/**
+ * Экран для добавления нового или редактирования существующего кредита/займа.
+ *
+ * Этот Composable представляет собой форму с полями для ввода всех необходимых
+ * параметров кредита, таких как название, сумма, процентная ставка, дата начала и т. д.
+ * Экран работает в двух режимах:
+ * 1.  **Режим добавления**: Если в параметр `loan` передаётся `null`, поля будут пустыми,
+ * и по нажатию кнопки "Сохранить" будет создан новый объект `Loan`.
+ * 2.  **Режим редактирования**: Если передать существующий объект `Loan`, форма будет
+ * предзаполнена его данными, а кнопка изменит название на "Сохранить изменения".
+ *
+ * Ключевые особенности:
+ * - Валидация вводимых данных с подсветкой некорректно заполненных полей.
+ * - Автоматический расчёт срока кредита в месяцах на основе суммы, ставки и ежемесячного платежа.
+ * - Выбор типа кредита (кредит или займ) и дня ежемесячного платежа.
+ * - Возможность использовать специфичный метод расчёта процентов (по методу Сбера).
+ * - Взаимодействие с [LoanViewModel] для сохранения или обновления данных в репозитории.
+ * - Использование [NavController] для возврата на предыдущий экран после успешного сохранения.
+ *
+ * @param loanViewModel ViewModel для управления данными о кредитах.
+ * @param navController Контроллер навигации для управления перемещением между экранами.
+ * @param loan Необязательный объект [Loan]. Если он не `null`, экран переходит в режим редактирования.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddLoanScreen(
@@ -39,7 +60,7 @@ fun AddLoanScreen(
     loan: Loan? = null
 ) {
     val settingsVM: com.kreditnik.app.viewmodel.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-    // ==== Переменные состояния ====
+
     var name by remember { mutableStateOf(loan?.name ?: "") }
     var principal by remember { mutableStateOf(loan?.initialPrincipal?.toString() ?: "") }
     var interestRate by remember { mutableStateOf(loan?.interestRate?.toString() ?: "") }
@@ -52,9 +73,7 @@ fun AddLoanScreen(
     var paymentDayExpanded by remember { mutableStateOf(false) }
 
     var manualMonthlyPayment by remember { mutableStateOf(loan?.monthlyPayment?.toString() ?: "") }
-    var autoCalculatePayment by remember { mutableStateOf(false) }
 
-    // Ошибки для подсветки
     var nameError by remember { mutableStateOf(false) }
     var principalError by remember { mutableStateOf(false) }
     var interestRateError by remember { mutableStateOf(false) }
@@ -70,7 +89,6 @@ fun AddLoanScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // ==== UI ====
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -92,8 +110,6 @@ fun AddLoanScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ... (весь код до блока с ежемесячным платежом остается без изменений)
-
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -321,55 +337,44 @@ fun AddLoanScreen(
                 )
             }
 
-            // Авторасчёт срока кредита
-
             LaunchedEffect(principal, interestRate, manualMonthlyPayment) {
                 val loanPrincipal = principal.toDoubleOrNull()
                 val loanInterestRate = interestRate.toDoubleOrNull()
                 val payment = manualMonthlyPayment.toDoubleOrNull()
 
-                // Если данных для расчёта недостаточно, просто выходим
                 if (loanPrincipal == null || loanInterestRate == null || payment == null || payment <= 0) {
-                    months = "" // Очищаем поле срока, если данных нет
+                    months = ""
                     return@LaunchedEffect
                 }
 
                 val monthlyRate = (loanInterestRate / 100) / 12
 
-                // Проверка: если платёж меньше процентов за месяц, долг будет только расти
                 if (monthlyRate > 0 && payment <= loanPrincipal * monthlyRate) {
-                    months = "∞" // Бесконечность
+                    months = "∞"
                     return@LaunchedEffect
                 }
 
                 val calculatedMonths = if (monthlyRate == 0.0) {
-                    // Если ставка 0%, считаем просто
                     loanPrincipal / payment
                 } else {
-                    // Формула для расчёта количества месяцев
                     -Math.log(1 - (loanPrincipal * monthlyRate / payment)) / Math.log(1 + monthlyRate)
                 }
 
-                // Округляем до целого числа месяцев в большую сторону и обновляем поле
                 months = kotlin.math.ceil(calculatedMonths).toInt().toString()
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 🔴 НАЙДИ И ЗАМЕНИ БЛОК КНОПКИ
-
             Button(
                 onClick = {
                     val loanPrincipal = principal.toDoubleOrNull()
-                    val loanMonths = months.toIntOrNull() // Это значение теперь рассчитывается автоматически
+                    val loanMonths = months.toIntOrNull()
                     val loanInterestRate = interestRate.toDoubleOrNull()
-                    val finalMonthlyPayment = manualMonthlyPayment.toDoubleOrNull() // Это значение вводит пользователь
+                    val finalMonthlyPayment = manualMonthlyPayment.toDoubleOrNull()
 
-                    // Проверка на ошибки
                     nameError = name.isBlank()
                     principalError = loanPrincipal == null || loanPrincipal <= 0
                     interestRateError = loanInterestRate == null
-                    // Проверяем, что срок рассчитался корректно (не пустой и не бесконечность)
                     monthsError = months.isBlank() || months == "∞"
                     monthlyPaymentError = finalMonthlyPayment == null || finalMonthlyPayment <= 0
 
@@ -378,7 +383,6 @@ fun AddLoanScreen(
                     if (!hasError) {
                         scope.launch {
                             if (loan == null) {
-                                // ── СОЗДАЁМ новый кредит ──
                                 val newLoan = Loan(
                                     name              = name,
                                     type              = selectedType,
@@ -388,9 +392,9 @@ fun AddLoanScreen(
                                     monthlyPaymentDay = selectedPaymentDay,
                                     initialPrincipal  = loanPrincipal!!,
                                     principal         = loanPrincipal,
-                                    months            = loanMonths!!, // Сохраняем рассчитанный срок
-                                    monthlyPayment    = finalMonthlyPayment!!, // Сохраняем платёж
-                                    usesSberbankCalculation = useSberbankMethod, //Для сбера
+                                    months            = loanMonths!!,
+                                    monthlyPayment    = finalMonthlyPayment!!,
+                                    usesSberbankCalculation = useSberbankMethod,
                                     gracePeriodDays   = null,
                                     mandatoryPaymentDay = null,
                                     gracePeriodEndDate  = null,
@@ -402,9 +406,7 @@ fun AddLoanScreen(
                                 loanViewModel.addLoan(newLoan)
 
                             } else {
-                                // ── РЕДАКТИРУЕМ существующий кредит ──
                                 val updatedLoan = if (selectedDate != loan.startDate) {
-                                    // ЕСЛИ ДАТА ИЗМЕНИЛАСЬ: сбрасываем финансовое состояние
                                     loan.copy(
                                         name              = name,
                                         type              = selectedType,
@@ -415,14 +417,11 @@ fun AddLoanScreen(
                                         monthlyPayment    = finalMonthlyPayment!!,
                                         usesSberbankCalculation = useSberbankMethod,
                                         months            = loanMonths!!,
-
-                                        // Сбрасываем прогресс до новой даты начала
                                         principal         = loanPrincipal,
                                         accruedInterest   = 0.0,
                                         lastInterestCalculationDate = selectedDate
                                     )
                                 } else {
-                                    // ЕСЛИ ДАТА НЕ МЕНЯЛАСЬ: сохраняем текущий прогресс
                                     loan.copy(
                                         name              = name,
                                         type              = selectedType,
@@ -436,13 +435,11 @@ fun AddLoanScreen(
                                     )
                                 }
                                 loanViewModel.updateLoan(updatedLoan)
-                                loanViewModel.updateLoan(updatedLoan)
                             }
                             navController.popBackStack()
                         }
                     }
                 },
-                // ... остальные параметры кнопки
             ) {
                 Text(
                     text = if (loan == null) "Сохранить" else "Сохранить изменения",
