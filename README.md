@@ -5,19 +5,42 @@
 ## 📱 Скриншоты
 
 #### Главный экран со списком кредитов
-![Главный экран](./screenshots/CreditsScreen.jpg)
+<div align="center">
+  <a href="./screenshots/CreditsScreen.jpg">
+    <img src="./screenshots/CreditsScreen.jpg" alt="Главный экран" width="300"/>
+  </a>
+</div>
 
 #### Экран деталей кредита (верхняя и нижняя части)
-*Так как экран не помещался целиком, он показан на двух скриншотах.*
-![Детали кредита - Часть 1](./screenshots/LoanDetailScreen.jpg)
-![Детали кредита - Часть 2](./screenshots/LoanDetailScreen2.jpg)
+<div align="center">
+  <a href="./screenshots/LoanDetailScreen.jpg">
+    <img src="./screenshots/LoanDetailScreen.jpg" alt="Детали кредита - Часть 1" width="300"/>
+  </a>
+</div>
+<div align="center">
+  <a href="./screenshots/LoanDetailScreen2.jpg">
+    <img src="./screenshots/LoanDetailScreen2.jpg" alt="Детали кредита - Часть 2" width="300"/>
+  </a>
+</div>
 
 #### Экран добавления нового кредита
-![Добавление кредита](./screenshots/AddLoanScreen.jpg)
+<div align="center">
+  <a href="./screenshots/AddLoanScreen.jpg">
+    <img src="./screenshots/AddLoanScreen.jpg" alt="Добавление кредита" width="300"/>
+  </a>
+</div>
 
 #### Экран настроек (в светлой и тёмной теме)
-![Настройки - Тёмная тема](./screenshots/SettingsScreen.jpg)
-![Настройки - Светлая тема](./screenshots/SettingsScreen2.jpg)
+<div align="center">
+  <a href="./screenshots/SettingsScreen.jpg">
+    <img src="./screenshots/SettingsScreen.jpg" alt="Настройки - Тёмная тема" width="300"/>
+  </a>
+</div>
+<div align="center">
+  <a href="./screenshots/SettingsScreen2.jpg">
+    <img src="./screenshots/SettingsScreen2.jpg" alt="Настройки - Светлая тема" width="300"/>
+  </a>
+</div>
 
 ## ✨ Основные возможности
 
