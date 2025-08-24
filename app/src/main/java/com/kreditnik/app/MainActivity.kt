@@ -83,33 +83,6 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-                // автосоздание тестового кредита
-                LaunchedEffect(Unit) { // LaunchedEffect — это и есть нужная нам корутина
-                    val existingLoans = loanViewModel.loans.value
-                    if (existingLoans.isEmpty()) {
-                        loanViewModel.addLoan(
-                            com.kreditnik.app.data.Loan(
-                                name = "Тестовый кредит",
-                                type = LoanType.CREDIT,
-                                principal = 10000.0,
-                                accruedInterest = 500.0,
-                                initialPrincipal = 10000.0,
-                                interestRate = 10.0,
-                                months = 12,
-                                monthlyPayment = 879.16,
-                                startDate = LocalDate.now().minusMonths(1),
-                                monthlyPaymentDay = 15,
-                                reminderEnabled = false,
-                                logo = "",
-                                gracePeriodDays = 0,
-                                mandatoryPaymentDay = 0,
-                                gracePeriodEndDate = null,
-                                debtDueDate = null
-                            )
-                        )
-                    }
-                }
-
                 MainScreen(loanViewModel, settingsViewModel)
             }
         }
